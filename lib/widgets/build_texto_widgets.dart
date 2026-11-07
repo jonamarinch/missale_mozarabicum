@@ -9,7 +9,18 @@ final RegExp _marca = RegExp(r'<([rkbni]+)>(.*?)</>', dotAll: true);
 final RegExp _simbolos = RegExp('[✠♦]');
 
 /// Construye el texto aplicando las marcas de formato sobre el estilo de su tipo
-Widget buildTextoMarcado(String raw, TipoTextoStyle cfg, {required BuildContext context}) {
+Widget buildTextoMarcado(
+  String raw,
+  TipoTextoStyle cfg, {
+  required BuildContext context,
+  bool recortarArriba = false,
+  bool recortarAbajo = false,
+}) {
+  // Para pegar una línea a otra se ajusta la altura a la letra y se quita el espacio sobrante
+  final compacto = recortarArriba || recortarAbajo;
+  if (compacto) {
+    cfg = cfg.copyWith(style: cfg.style.copyWith(height: 1.0));
+  }
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final rojo = isDark ? const Color(0xFFFF6B6B) : const Color(0xFFB00020);
   final negro = isDark ? Colors.white : Colors.black;
@@ -60,5 +71,14 @@ Widget buildTextoMarcado(String raw, TipoTextoStyle cfg, {required BuildContext 
     anadir(raw.substring(posicion), cfg.style);
   }
 
-  return Text.rich(TextSpan(children: spans), textAlign: cfg.align);
+  return Text.rich(
+    TextSpan(children: spans),
+    textAlign: cfg.align,
+    textHeightBehavior: compacto
+        ? TextHeightBehavior(
+            applyHeightToFirstAscent: !recortarArriba,
+            applyHeightToLastDescent: !recortarAbajo,
+          )
+        : null,
+  );
 }

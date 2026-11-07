@@ -26,12 +26,6 @@ Widget renderTextoFiesta({
   );
   // Espacio como en el Word: una línea en blanco donde el Word la tiene, o al cambiar de sección
   final hueco = texto.huecoPara(languageCode) > 0 || nuevaSeccion;
-  // Una referencia (tipo 4) va pegada al título que la precede
-  final anterior = index > 0 ? textos[index - 1].tipoPara(languageCode) : 0;
-  final pegada = texto.tipoPara(languageCode) == 4 && (anterior == 5 || anterior == 8);
-  if (pegada) {
-    return Transform.translate(offset: const Offset(0, -_minVerticalSpacing), child: hijo);
-  }
   return hueco ? Padding(padding: const EdgeInsets.only(top: _altoLineaBlanca), child: hijo) : hijo;
 }
 
@@ -61,8 +55,11 @@ Widget _renderTexto({
   final tipoActual = tipo;
   final tipoSiguiente = siguiente?.tipoPara(languageCode);
 
-  final casoEspecial = (tipoActual == 4 && tipoSiguiente == 5) ||
-      (tipoActual == 5 && tipoSiguiente == 4);
+  // Una referencia (tipo 4) va pegada al título (5 u 8) que la precede: sin margen ni
+  // el espacio que la tipografía reserva por encima y por debajo de la línea en esa unión
+  final tipoAnterior = index > 0 ? textos[index - 1].tipoPara(languageCode) : 0;
+  final pegadaArriba = tipoActual == 4 && (tipoAnterior == 5 || tipoAnterior == 8);
+  final pegadaAbajo = (tipoActual == 5 || tipoActual == 8) && tipoSiguiente == 4;
 
   // Tipo 1: Normal
   if (tipo == 1) {
@@ -98,13 +95,16 @@ Widget _renderTexto({
   // Tipos 4, 5, 8: Rúbricas centradas y título
   else if (tipo == 4 || tipo == 5 || tipo == 8) {
     return Padding(
-      padding: const EdgeInsets.only(
-        top: _minVerticalSpacing,
-        bottom: _minVerticalSpacing,
+      padding: EdgeInsets.only(
+        top: pegadaArriba ? 0 : _minVerticalSpacing,
+        bottom: pegadaAbajo ? 0 : _minVerticalSpacing,
         left: 16,
         right: 16,
       ),
-      child: buildTextoMarcado(text, cfg, context: context),
+      child: buildTextoMarcado(
+        text, cfg, context: context,
+        recortarArriba: pegadaArriba, recortarAbajo: pegadaAbajo,
+      ),
     );
   }
   // Resto de tipos (2, 6, 7)
