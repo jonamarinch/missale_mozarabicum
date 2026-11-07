@@ -8,7 +8,7 @@ import 'package:missale_mozarabicum/services/tipos_texto.dart';
 import 'build_texto_widgets.dart';
 
 // Constante para el espaciado mínimo entre textos
-const double _minVerticalSpacing = 8.0;
+const double _minVerticalSpacing = 5.0;
 
 Widget renderTextoFiesta({
   required BuildContext context,
@@ -24,14 +24,19 @@ Widget renderTextoFiesta({
     context: context, ref: ref, texto: texto, index: index, textos: textos,
     languageCode: languageCode, edicion: edicion,
   );
-  // Espacio como en el Word: sus líneas en blanco, y al menos una al cambiar de sección
-  var lineas = texto.huecoPara(languageCode);
-  if (nuevaSeccion && lineas == 0) lineas = 1;
-  return lineas > 0 ? Padding(padding: EdgeInsets.only(top: _altoLineaBlanca * lineas), child: hijo) : hijo;
+  // Espacio como en el Word: una línea en blanco donde el Word la tiene, o al cambiar de sección
+  final hueco = texto.huecoPara(languageCode) > 0 || nuevaSeccion;
+  // Una referencia (tipo 4) va pegada al título que la precede
+  final anterior = index > 0 ? textos[index - 1].tipoPara(languageCode) : 0;
+  final pegada = texto.tipoPara(languageCode) == 4 && (anterior == 5 || anterior == 8);
+  if (pegada) {
+    return Transform.translate(offset: const Offset(0, -_minVerticalSpacing), child: hijo);
+  }
+  return hueco ? Padding(padding: const EdgeInsets.only(top: _altoLineaBlanca), child: hijo) : hijo;
 }
 
 /// Alto de una línea en blanco del Word
-const double _altoLineaBlanca = 20.0;
+const double _altoLineaBlanca = 18.0;
 
 Widget _renderTexto({
   required BuildContext context,
