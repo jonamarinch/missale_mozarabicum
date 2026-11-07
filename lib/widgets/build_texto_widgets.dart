@@ -1,101 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:missale_mozarabicum/services/tipo_texto_style.dart';
 
-Widget buildTextoConEstilo(String raw, TipoTextoStyle cfg, {required BuildContext context}) {
-  final text = cfg.uppercase ? raw.toUpperCase() : raw;
+/// Marcas de formato dentro del texto: <r>rojo</>, <k>negro</>, <b>negrita</>,
+/// <n>sin negrita</>, <i>cursiva</>. Se pueden combinar: <rn>(♦) </>por mi culpa.
+final RegExp _marca = RegExp(r'<([rkbni]+)>(.*?)</>', dotAll: true);
 
-  final cruzPattern = RegExp('✠');
+/// Símbolos que siempre se dibujan en rojo y los que se reducen a la mitad
+final RegExp _simbolos = RegExp('[✠♦]');
+
+/// Construye el texto aplicando las marcas de formato sobre el estilo de su tipo
+Widget buildTextoMarcado(String raw, TipoTextoStyle cfg, {required BuildContext context}) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final cruzStyle = cfg.style.copyWith(
-    color: isDark ? const Color(0xFFFF6B6B) : const Color(0xFFB00020),
-  );
+  final rojo = isDark ? const Color(0xFFFF6B6B) : const Color(0xFFB00020);
+  final negro = isDark ? Colors.white : Colors.black;
 
-  if (cfg.highlightUntilPattern == null || cfg.highlightColor == null) {
-    return Text.rich(
-      TextSpan(children: _resaltarOcurrencias(
-        text: text,
-        pattern: cruzPattern,
-        base: cfg.style,
-        highlight: cruzStyle,
-      )),
-      textAlign: cfg.align,
-    );
-  }
+  final spans = <InlineSpan>[];
 
-  final m = cfg.highlightUntilPattern!.firstMatch(text);
-  if (m == null) {
-    return Text.rich(
-      TextSpan(children: _resaltarOcurrencias(
-        text: text,
-        pattern: cruzPattern,
-        base: cfg.style,
-        highlight: cruzStyle,
-      )),
-      textAlign: cfg.align,
-    );
-  }
-
-  final cut = m.end;
-  final before = text.substring(0, cut);
-  final after = text.substring(cut);
-
-  return Text.rich(
-    TextSpan(children: [
-      ..._resaltarOcurrencias(
-        text: before,
-        pattern: cruzPattern,
-        base: cfg.style.copyWith(color: cfg.highlightColor),
-        highlight: cruzStyle,
-      ),
-      if (after.isNotEmpty)
-        ..._resaltarOcurrencias(
-          text: after,
-          pattern: cruzPattern,
-          base: cfg.style,
-          highlight: cruzStyle,
-        ),
-    ]),
-    textAlign: cfg.align,
-  );
-}
-
-Widget buildTextoConCruces(String raw, TipoTextoStyle cfg, {required BuildContext context}) {
-  final text = cfg.uppercase ? raw.toUpperCase() : raw;
-
-  final base = cfg.style;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final rojo = base.copyWith(
-    color: isDark ? const Color(0xFFFF6B6B) : const Color(0xFFB00020),
-  );
-
-  return Text.rich(
-    TextSpan(children: _resaltarOcurrencias(
-      text: text,
-      pattern: RegExp('✠'),
-      base: base,
-      highlight: rojo,
-    )),
-    textAlign: cfg.align,
-  );
-}
-
-List<TextSpan> _resaltarOcurrencias({
-  required String text,
-  required RegExp pattern,
-  required TextStyle base,
-  required TextStyle highlight,
-}) {
-  final spans = <TextSpan>[];
-  int start = 0;
-  for (final m in pattern.allMatches(text)) {
-    if (m.start > start) {
-      spans.add(TextSpan(text: text.substring(start, m.start), style: base));
+  void anadir(String texto, TextStyle estilo) {
+    final visible = cfg.uppercase ? texto.toUpperCase() : texto;
+    var inicio = 0;
+    for (final m in _simbolos.allMatches(visible)) {
+      if (m.start > inicio) {
+        spans.add(TextSpan(text: visible.substring(inicio, m.start), style: estilo));
+      }
+      final simbolo = m.group(0)!;
+      spans.add(TextSpan(
+        // El selector U+FE0E evita que Android lo dibuje como emoji, con su propio color
+        text: simbolo == '♦' ? '♦︎' : simbolo,
+        style: simbolo == '♦'
+            ? estilo.copyWith(color: rojo, fontSize: (estilo.fontSize ?? 16) * 0.5)
+            : estilo.copyWith(color: rojo),
+      ));
+      inicio = m.end;
     }
-    spans.add(TextSpan(text: m.group(0), style: highlight));
-    start = m.end;
+    if (inicio < visible.length) {
+      spans.add(TextSpan(text: visible.substring(inicio), style: estilo));
+    }
   }
-  if (start < text.length) {
-    spans.add(TextSpan(text: text.substring(start), style: base));
+
+  TextStyle aplicar(String marcas) {
+    var estilo = cfg.style;
+    if (marcas.contains('r')) estilo = estilo.copyWith(color: rojo);
+    if (marcas.contains('k')) estilo = estilo.copyWith(color: negro);
+    if (marcas.contains('b')) estilo = estilo.copyWith(fontWeight: FontWeight.w700);
+    if (marcas.contains('n')) estilo = estilo.copyWith(fontWeight: FontWeight.w400);
+    if (marcas.contains('i')) estilo = estilo.copyWith(fontStyle: FontStyle.italic);
+    return estilo;
   }
-  return spans;
+
+  var posicion = 0;
+  for (final m in _marca.allMatches(raw)) {
+    if (m.start > posicion) {
+      anadir(raw.substring(posicion, m.start), cfg.style);
+    }
+    anadir(m.group(2)!, aplicar(m.group(1)!));
+    posicion = m.end;
+  }
+  if (posicion < raw.length) {
+    anadir(raw.substring(posicion), cfg.style);
+  }
+
+  return Text.rich(TextSpan(children: spans), textAlign: cfg.align);
 }

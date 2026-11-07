@@ -26,7 +26,7 @@ Widget renderTextoFiesta({
   );
 
   final rawText = texto.getTextForLanguage(languageCode);
-  final text = cfg.uppercase ? rawText.toUpperCase() : rawText;
+  final text = rawText;
 
   final siguiente = index + 1 < textos.length ? textos[index + 1] : null;
   final tipoActual = tipo;
@@ -44,7 +44,7 @@ Widget renderTextoFiesta({
         top: _minVerticalSpacing,
         bottom: _minVerticalSpacing,
       ),
-      child: buildTextoConCruces(text, cfg, context: context),
+      child: buildTextoMarcado(text, cfg, context: context),
     );
   }
   // Tipo 3: Semirrubrica
@@ -55,10 +55,6 @@ Widget renderTextoFiesta({
               ? Colors.white
               : Colors.black
       ),
-      highlightUntilPattern: RegExp(r'[.:;]'),
-      highlightColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFFFF6B6B)
-          : const Color(0xFFB00020),
     );
     return Padding(
       padding: const EdgeInsets.only(
@@ -67,7 +63,7 @@ Widget renderTextoFiesta({
         top: _minVerticalSpacing,
         bottom: _minVerticalSpacing,
       ),
-      child: buildTextoConEstilo(text, cfg3, context: context),
+      child: buildTextoMarcado(text, cfg3, context: context),
     );
   }
   // Tipos 4, 5, 8: Rúbricas centradas y título
@@ -86,7 +82,7 @@ Widget renderTextoFiesta({
           left: 16,
           right: 16
       ),
-      child: Text(text, style: cfg.style, textAlign: cfg.align),
+      child: buildTextoMarcado(text, cfg, context: context),
     );
   }
   // Resto de tipos (2, 6, 7)
@@ -105,7 +101,7 @@ Widget renderTextoFiesta({
         top: _minVerticalSpacing,
         bottom: _minVerticalSpacing,
       ),
-      child: Text(text, style: cfg.style, textAlign: cfg.align),
+      child: buildTextoMarcado(text, cfg, context: context),
     );
   }
 }
