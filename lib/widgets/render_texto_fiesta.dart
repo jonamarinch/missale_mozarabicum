@@ -18,24 +18,25 @@ Widget renderTextoFiesta({
   required List<Texto> textos,
   required String languageCode,
 }) {
+  final tipo = texto.tipoPara(languageCode);
   final TipoTextoStyle cfg = ControlEstilos.estiloPorTipo(
     context,
     ref,
-    TipoTexto.values[texto.tipo - 1],
+    TipoTexto.values[tipo - 1],
   );
 
   final rawText = texto.getTextForLanguage(languageCode);
   final text = cfg.uppercase ? rawText.toUpperCase() : rawText;
 
   final siguiente = index + 1 < textos.length ? textos[index + 1] : null;
-  final tipoActual = texto.tipo;
-  final tipoSiguiente = siguiente?.tipo;
+  final tipoActual = tipo;
+  final tipoSiguiente = siguiente?.tipoPara(languageCode);
 
   final casoEspecial = (tipoActual == 4 && tipoSiguiente == 5) ||
       (tipoActual == 5 && tipoSiguiente == 4);
 
   // Tipo 1: Normal
-  if (texto.tipo == 1) {
+  if (tipo == 1) {
     return Padding(
       padding: const EdgeInsets.only(
         left: 16,
@@ -47,7 +48,7 @@ Widget renderTextoFiesta({
     );
   }
   // Tipo 3: Semirrubrica
-  else if (texto.tipo == 3) {
+  else if (tipo == 3) {
     final cfg3 = cfg.copyWith(
       style: cfg.style.copyWith(
           color: Theme.of(context).brightness == Brightness.dark
@@ -70,7 +71,7 @@ Widget renderTextoFiesta({
     );
   }
   // Tipos 4, 5, 8: Rúbricas centradas y título
-  else if (texto.tipo == 4 || texto.tipo == 5 || texto.tipo == 8) {
+  else if (tipo == 4 || tipo == 5 || tipo == 8) {
     return Padding(
       padding: casoEspecial
           ? const EdgeInsets.only(
@@ -91,7 +92,7 @@ Widget renderTextoFiesta({
   // Resto de tipos (2, 6, 7)
   else {
     return Padding(
-      padding: texto.tipo == 7
+      padding: tipo == 7
           ? const EdgeInsets.only(
         left: 30,
         right: 16,

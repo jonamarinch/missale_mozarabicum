@@ -9,6 +9,9 @@ import 'package:missale_mozarabicum/widgets/render_texto_fiesta.dart';
 import 'package:missale_mozarabicum/widgets/settings_botton.dart';
 import 'package:missale_mozarabicum/providers/settings_selectors.dart';
 
+/// Colección de textos revisados a partir de los Word
+const String _coleccionTextos = 'textos_v2';
+
 /// Pantalla que muestra los textos de una fiesta
 class FiestaScreen extends ConsumerStatefulWidget {
   final Fiesta fiesta;
@@ -35,30 +38,26 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
   Future<void> _loadTextos() async {
     print('[TAG] Entrando en _loadTextos');
 
-    // Obtener el idioma actual
-    final currentLocale = ref.read(localeProvider);
-    final languageCode = currentLocale.languageCode;
-
     final prefs = await SharedPreferences.getInstance();
-    final cacheKey = 'textos_${widget.fiesta.codigo}_$languageCode';
+    // La copia guarda todas las ediciones e idiomas; se filtran al mostrarlos
+    final cacheKey = '${_coleccionTextos}_${widget.fiesta.codigo}';
 
     final fiestaId = widget.fiesta.codigo;
     final tiempoId = widget.fiesta.tiempo;
 
-    print('[TAG] Consultando Firestore: fiestaId=$fiestaId, tiempoId=$tiempoId, idioma=$languageCode');
+    print('[TAG] Consultando Firestore: fiestaId=$fiestaId, tiempoId=$tiempoId');
 
     final QuerySnapshot<Map<String, dynamic>> textosSnap;
     try {
       textosSnap = await FirebaseFirestore.instance
-          .collection('textos')
+          .collection(_coleccionTextos)
           .where('asoc', arrayContainsAny: [fiestaId, tiempoId])
-          .orderBy('orden')
           .get();
     } catch (e) {
       print('[TAG] No se pudo consultar Firestore: $e');
       final copia = prefs.getString(cacheKey);
       if (copia != null) {
-        print('[TAG] Cargando copia guardada para idioma: $languageCode');
+        print('[TAG] Cargando copia guardada');
         _textos = List<Texto>.from(jsonDecode(copia).map((e) => Texto.fromFirestore(e)));
       }
       if (mounted) {
@@ -78,9 +77,11 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
 
     print('[TAG] uniqueDocs.length: ${uniqueDocs.length}');
 
+    // Se ordena aquí: así la colección no necesita un índice compuesto en Firestore
     _textos = uniqueDocs
         .map((doc) => Texto.fromFirestore(doc.data()))
-        .toList();
+        .toList()
+      ..sort((a, b) => a.orden.compareTo(b.orden));
 
     print('[TAG] _textos.length: ${_textos.length}');
 
@@ -97,7 +98,7 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
     final jsonTextos = jsonEncode(_textos.map((t) => t.toJson()).toList());
     await prefs.setString(cacheKey, jsonTextos);
 
-    print('[TAG] Hecho - guardado en caché para idioma: $languageCode');
+    print('[TAG] Hecho - guardado en caché');
 
     if (mounted) {
       setState(() {
@@ -123,15 +124,13 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentLocale = ref.watch(localeProvider); // Idioma actual
+    final languageCode = ref.watch(localeProvider).languageCode; // Idioma actual
+    final edicion = ref.watch(edicionProvider); // Edición actual
 
-    // Detectar cambios de idioma y recargar si es necesario
-    ref.listen<Locale>(localeProvider, (previous, next) {
-      if (previous != null && previous.languageCode != next.languageCode) {
-        print('[TAG] Idioma cambió de ${previous.languageCode} a ${next.languageCode}, recargando textos...');
-        _loadTextos();
-      }
-    });
+    // Solo lo que pertenece a la edición y tiene texto en este idioma
+    final visibles = _textos
+        .where((t) => t.perteneceA(edicion) && t.getTextForLanguage(languageCode).trim().isNotEmpty)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -144,21 +143,21 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
       // Indicador de carga
           ? const Center(child: CircularProgressIndicator())
       // Texto si no hay resultados
-          : _textos.isEmpty
+          : visibles.isEmpty
           ? const Center(child: Text('No hay textos para esta fiesta.'))
       // Lista de textos
           : ListView.builder(
-        itemCount: _textos.length,
+        itemCount: visibles.length,
         itemBuilder: (context, index) {
-          final texto = _textos[index];
+          final texto = visibles[index];
 
           return renderTextoFiesta(
             context: context,
             ref: ref,
             texto: texto,
             index: index,
-            textos: _textos,
-            languageCode: currentLocale.languageCode, // Pasar el idioma
+            textos: visibles,
+            languageCode: languageCode, // Pasar el idioma
           );
         },
       ),

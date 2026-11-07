@@ -12,6 +12,15 @@ final localeProvider = Provider<Locale>((ref) {
   );
 });
 
+/// Edición actual (derivada de settingsProvider)
+final edicionProvider = Provider<String>((ref) {
+  final async = ref.watch(settingsProvider);
+  return async.maybeWhen(
+    data: (s) => s.edicion,
+    orElse: () => edicionAdaptada,
+  );
+});
+
 /// Theme mode actual (derivado de settingsProvider)
 final themeModeProvider = Provider<ThemeMode>((ref) {
   final async = ref.watch(settingsProvider);

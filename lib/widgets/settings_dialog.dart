@@ -67,6 +67,16 @@ class SettingsDialog extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _SectionHeader(
+                        icon: Icons.menu_book,
+                        title: 'Edición',
+                      ),
+                      const SizedBox(height: 12),
+                      _EditionSelector(
+                        currentEdition: settings.edicion,
+                        onChanged: settingsNotifier.setEdicion,
+                      ),
+                      const SizedBox(height: 24),
+                      _SectionHeader(
                         icon: Icons.language,
                         title: 'Idioma',
                       ),
@@ -166,6 +176,56 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// Selector de edición
+class _EditionSelector extends StatelessWidget {
+  final String currentEdition;
+  final Function(String) onChanged;
+
+  const _EditionSelector({
+    required this.currentEdition,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const ediciones = [
+      {'id': edicionOriginal, 'nombre': 'Original', 'detalle': 'Texto latino original'},
+      {'id': edicionAdaptada, 'nombre': 'Adaptada', 'detalle': 'Con los detalles propios de la parroquia'},
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: ediciones.map((edicion) {
+          final id = edicion['id']!;
+          final isSelected = currentEdition == id;
+
+          return ListTile(
+            leading: Radio<String>(
+              value: id,
+              groupValue: currentEdition,
+              onChanged: (value) => value != null ? onChanged(value) : null,
+              activeColor: const Color(0xFF000000),
+            ),
+            title: Text(
+              edicion['nombre']!,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            subtitle: Text(edicion['detalle']!, style: const TextStyle(fontSize: 12)),
+            onTap: () => onChanged(id),
+            dense: true,
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
 /// Selector de idioma
 class _LanguageSelector extends StatelessWidget {
   final Locale currentLocale;
@@ -180,7 +240,6 @@ class _LanguageSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final languages = [
       {'code': 'es_ES', 'name': 'Español', 'locale': const Locale('es', 'ES')},
-      {'code': 'en_US', 'name': 'English', 'locale': const Locale('en', 'US')},
       {'code': 'la_VA', 'name': 'Latinum', 'locale': const Locale('la', 'VA')},
     ];
 

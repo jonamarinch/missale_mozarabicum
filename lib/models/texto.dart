@@ -8,6 +8,10 @@ class Texto {
   final String txt_la;
   final List<String> fiestas;
   final List<String> tiempos;
+  /// Ediciones en las que aparece ('original', 'adaptada'). Vacía: en todas (el título).
+  final List<String> ediciones;
+  /// Tipo del latín, solo si difiere del tipo general
+  final int? tipoLa;
 
   // Constructor con todos los campos requeridos para garantizar inmutabilidad.
   Texto({
@@ -19,6 +23,8 @@ class Texto {
     required this.txt_la,
     required this.fiestas,
     required this.tiempos,
+    this.ediciones = const [],
+    this.tipoLa,
   });
 
   // Constructor para títulos
@@ -34,6 +40,12 @@ class Texto {
       tiempos: [''],
     );
   }
+
+  /// Indica si el texto se muestra en la edición indicada
+  bool perteneceA(String edicion) => ediciones.isEmpty || ediciones.contains(edicion);
+
+  /// Tipo con el que se muestra en cada idioma: el latín puede no llevar ℣ y tener otro formato
+  int tipoPara(String languageCode) => languageCode == 'la' ? (tipoLa ?? tipo) : tipo;
 
   // Método para obtener el texto según el idioma
   String getTextForLanguage(String languageCode) {
@@ -59,6 +71,8 @@ class Texto {
     'txt_la': txt_la,
     'fiestas': fiestas,
     'tiempos': tiempos,
+    'ediciones': ediciones,
+    'tipo_la': tipoLa,
   };
 
   // Fábrica para crear un Texto a partir de un documento de Firestore
@@ -72,6 +86,8 @@ class Texto {
       txt_la: data['txt_la'] ?? '',
       fiestas: List<String>.from(data['fiestas'] ?? []),
       tiempos: List<String>.from(data['tiempos'] ?? []),
+      ediciones: List<String>.from(data['ediciones'] ?? []),
+      tipoLa: data['tipo_la'] as int?,
     );
   }
 }
