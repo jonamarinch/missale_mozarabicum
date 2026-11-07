@@ -24,8 +24,14 @@ Widget renderTextoFiesta({
     context: context, ref: ref, texto: texto, index: index, textos: textos,
     languageCode: languageCode, edicion: edicion,
   );
-  return nuevaSeccion ? Padding(padding: const EdgeInsets.only(top: 22), child: hijo) : hijo;
+  // Espacio como en el Word: sus líneas en blanco, y al menos una al cambiar de sección
+  var lineas = texto.huecoPara(languageCode);
+  if (nuevaSeccion && lineas == 0) lineas = 1;
+  return lineas > 0 ? Padding(padding: EdgeInsets.only(top: _altoLineaBlanca * lineas), child: hijo) : hijo;
 }
+
+/// Alto de una línea en blanco del Word
+const double _altoLineaBlanca = 20.0;
 
 Widget _renderTexto({
   required BuildContext context,
@@ -87,18 +93,11 @@ Widget _renderTexto({
   // Tipos 4, 5, 8: Rúbricas centradas y título
   else if (tipo == 4 || tipo == 5 || tipo == 8) {
     return Padding(
-      padding: casoEspecial
-          ? const EdgeInsets.only(
-          top: 25,
-          bottom: _minVerticalSpacing,
-          left: 16,
-          right: 16
-      )
-          : const EdgeInsets.only(
-          top: 25,
-          bottom: 25,
-          left: 16,
-          right: 16
+      padding: const EdgeInsets.only(
+        top: _minVerticalSpacing,
+        bottom: _minVerticalSpacing,
+        left: 16,
+        right: 16,
       ),
       child: buildTextoMarcado(text, cfg, context: context),
     );

@@ -14,8 +14,11 @@ class Texto {
   final int? tipoLa;
   /// Fila de la tabla del Word: al cambiar de sección se deja un espacio
   final int? seccion;
-  /// Traducción al español de la edición original (aún pendiente)
+  /// Traducción al español de la edición original
   final String originalEs;
+  /// Líneas en blanco que hay antes del texto en el Word (español y latín)
+  final int hueco;
+  final int huecoLa;
 
   // Constructor con todos los campos requeridos para garantizar inmutabilidad.
   Texto({
@@ -31,6 +34,8 @@ class Texto {
     this.tipoLa,
     this.seccion,
     this.originalEs = '',
+    this.hueco = 0,
+    this.huecoLa = 0,
   });
 
   // Constructor para títulos
@@ -54,6 +59,9 @@ class Texto {
     if (edicion == 'original' && ediciones.isNotEmpty) return languageCode == 'es' ? originalEs : '';
     return getTextForLanguage(languageCode);
   }
+
+  /// Líneas en blanco antes del texto, según el idioma
+  int huecoPara(String languageCode) => languageCode == 'la' ? huecoLa : hueco;
 
   /// Texto sin las marcas de formato, para buscar
   static String sinMarcas(String texto) => texto.replaceAll(RegExp(r'</?[rkbni]*>'), '');
@@ -92,6 +100,8 @@ class Texto {
     'tipo_la': tipoLa,
     'seccion': seccion,
     'original_es': originalEs,
+    'hueco': hueco,
+    'hueco_la': huecoLa,
   };
 
   // Fábrica para crear un Texto a partir de un documento de Firestore
@@ -109,6 +119,8 @@ class Texto {
       tipoLa: data['tipo_la'] as int?,
       seccion: data['seccion'] as int?,
       originalEs: data['original_es'] ?? '',
+      hueco: (data['hueco'] as num?)?.toInt() ?? 0,
+      huecoLa: (data['hueco_la'] as num?)?.toInt() ?? 0,
     );
   }
 }
