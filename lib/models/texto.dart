@@ -12,6 +12,10 @@ class Texto {
   final List<String> ediciones;
   /// Tipo del latín, solo si difiere del tipo general
   final int? tipoLa;
+  /// Fila de la tabla del Word: al cambiar de sección se deja un espacio
+  final int? seccion;
+  /// Traducción al español de la edición original (aún pendiente)
+  final String originalEs;
 
   // Constructor con todos los campos requeridos para garantizar inmutabilidad.
   Texto({
@@ -25,6 +29,8 @@ class Texto {
     required this.tiempos,
     this.ediciones = const [],
     this.tipoLa,
+    this.seccion,
+    this.originalEs = '',
   });
 
   // Constructor para títulos
@@ -40,6 +46,16 @@ class Texto {
       tiempos: [''],
     );
   }
+
+  /// Texto que se muestra según idioma y edición. El español de la ICAE no se usa en la original.
+  String textoPara(String languageCode, String edicion) {
+    if (languageCode == 'la') return txt_la;
+    if (edicion == 'original') return languageCode == 'es' ? originalEs : '';
+    return getTextForLanguage(languageCode);
+  }
+
+  /// Texto sin las marcas de formato, para buscar
+  static String sinMarcas(String texto) => texto.replaceAll(RegExp(r'</?[rkbni]*>'), '');
 
   /// Indica si el texto se muestra en la edición indicada
   bool perteneceA(String edicion) => ediciones.isEmpty || ediciones.contains(edicion);
@@ -73,6 +89,8 @@ class Texto {
     'tiempos': tiempos,
     'ediciones': ediciones,
     'tipo_la': tipoLa,
+    'seccion': seccion,
+    'original_es': originalEs,
   };
 
   // Fábrica para crear un Texto a partir de un documento de Firestore
@@ -88,6 +106,8 @@ class Texto {
       tiempos: List<String>.from(data['tiempos'] ?? []),
       ediciones: List<String>.from(data['ediciones'] ?? []),
       tipoLa: data['tipo_la'] as int?,
+      seccion: data['seccion'] as int?,
+      originalEs: data['original_es'] ?? '',
     );
   }
 }

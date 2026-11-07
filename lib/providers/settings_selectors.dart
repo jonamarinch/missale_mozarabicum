@@ -17,7 +17,7 @@ final edicionProvider = Provider<String>((ref) {
   final async = ref.watch(settingsProvider);
   return async.maybeWhen(
     data: (s) => s.edicion,
-    orElse: () => edicionAdaptada,
+    orElse: () => edicionIcae,
   );
 });
 

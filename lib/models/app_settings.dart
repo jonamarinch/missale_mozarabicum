@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Ediciones del Misal
 const String edicionOriginal = 'original';
-const String edicionAdaptada = 'adaptada';
+const String edicionIcae = 'icae';
 
 /// Idiomas disponibles por ahora: el inglés volverá cuando estén traducidos los textos.
 Locale _idiomaDisponible(String? languageCode, String? countryCode) {
@@ -30,7 +30,7 @@ class AppSettings {
     this.themeMode = ThemeMode.system,
     this.textScale = 1.0,
     this.useSystemFont = false,
-    this.edicion = edicionAdaptada,
+    this.edicion = edicionIcae,
   });
 
   AppSettings copyWith({
@@ -69,7 +69,7 @@ class AppSettings {
           .values[(map['themeMode'] as num?)?.toInt() ?? ThemeMode.system.index],
       textScale: (map['textScale'] as num?)?.toDouble() ?? 1.0,
       useSystemFont: map['useSystemFont'] as bool? ?? true,
-      edicion: map['edicion'] == edicionOriginal ? edicionOriginal : edicionAdaptada,
+      edicion: map['edicion'] == edicionOriginal ? edicionOriginal : edicionIcae,
     );
   }
 

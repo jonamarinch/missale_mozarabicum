@@ -17,6 +17,24 @@ Widget renderTextoFiesta({
   required int index,
   required List<Texto> textos,
   required String languageCode,
+  required String edicion,
+  bool nuevaSeccion = false,
+}) {
+  final hijo = _renderTexto(
+    context: context, ref: ref, texto: texto, index: index, textos: textos,
+    languageCode: languageCode, edicion: edicion,
+  );
+  return nuevaSeccion ? Padding(padding: const EdgeInsets.only(top: 22), child: hijo) : hijo;
+}
+
+Widget _renderTexto({
+  required BuildContext context,
+  required WidgetRef ref,
+  required Texto texto,
+  required int index,
+  required List<Texto> textos,
+  required String languageCode,
+  required String edicion,
 }) {
   final tipo = texto.tipoPara(languageCode);
   final TipoTextoStyle cfg = ControlEstilos.estiloPorTipo(
@@ -25,7 +43,7 @@ Widget renderTextoFiesta({
     TipoTexto.values[tipo - 1],
   );
 
-  final rawText = texto.getTextForLanguage(languageCode);
+  final rawText = texto.textoPara(languageCode, edicion);
   final text = rawText;
 
   final siguiente = index + 1 < textos.length ? textos[index + 1] : null;

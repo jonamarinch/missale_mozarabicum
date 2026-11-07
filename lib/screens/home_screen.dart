@@ -128,6 +128,13 @@ class HomeScreen extends ConsumerWidget {
 
                 headerStyle: HeaderStyle(
                   titleCentered: true,
+                  titleTextStyle: TextStyle(fontSize: 17, color: Theme.of(context).colorScheme.onSurface),
+                  leftChevronIcon: Icon(Icons.chevron_left, color: Theme.of(context).colorScheme.onSurface),
+                  rightChevronIcon: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface),
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+                  weekendStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 ),
 
                 calendarStyle: CalendarStyle(
@@ -141,8 +148,9 @@ class HomeScreen extends ConsumerWidget {
                   todayDecoration: BoxDecoration(
                     color: Colors.transparent,
                   ),
-                  defaultTextStyle: TextStyle(color: Colors.black87),
-                  weekendTextStyle: TextStyle(color: Colors.black54),
+                  // Colores del tema, para que se lean también en modo oscuro
+                  defaultTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  weekendTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)),
                   selectedTextStyle: TextStyle(color: Colors.blue),
                 ),
               ),

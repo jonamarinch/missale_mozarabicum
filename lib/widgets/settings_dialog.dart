@@ -11,6 +11,8 @@ class SettingsDialog extends ConsumerWidget {
     final settingsAsync = ref.watch(settingsProvider);
     final settings = settingsAsync.value ?? const AppSettings();
     final settingsNotifier = ref.read(settingsProvider.notifier);
+    final oscuro = Theme.of(context).brightness == Brightness.dark;
+    final tinta = Theme.of(context).colorScheme.onSurface;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -27,14 +29,14 @@ class SettingsDialog extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFf9efee),
+                color: oscuro ? const Color(0xFF2E2826) : const Color(0xFFf9efee),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.settings,
-                    color: Color(0xFF000000),
+                    color: tinta,
                     size: 24,
                   ),
                   const SizedBox(width: 12),
@@ -60,7 +62,7 @@ class SettingsDialog extends ConsumerWidget {
             // Contenido
             Flexible(
               child: ColoredBox(
-                color: const Color(0xFFfff8f7),
+                color: oscuro ? const Color(0xFF221E1C) : const Color(0xFFfff8f7),
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -160,7 +162,7 @@ class _SectionHeader extends StatelessWidget {
         Icon(
           icon,
           size: 20,
-          color: const Color(0xFF000000),
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         const SizedBox(width: 8),
         Text(
@@ -190,7 +192,7 @@ class _EditionSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     const ediciones = [
       {'id': edicionOriginal, 'nombre': 'Original', 'detalle': 'Texto latino original'},
-      {'id': edicionAdaptada, 'nombre': 'Adaptada', 'detalle': 'Con los detalles propios de la parroquia'},
+      {'id': edicionIcae, 'nombre': 'ICAE', 'detalle': 'Edición de la parroquia, en latín y español'},
     ];
 
     return Container(
@@ -208,7 +210,7 @@ class _EditionSelector extends StatelessWidget {
               value: id,
               groupValue: currentEdition,
               onChanged: (value) => value != null ? onChanged(value) : null,
-              activeColor: const Color(0xFF000000),
+              activeColor: Theme.of(context).colorScheme.onSurface,
             ),
             title: Text(
               edicion['nombre']!,
@@ -258,7 +260,7 @@ class _LanguageSelector extends StatelessWidget {
               value: locale,
               groupValue: currentLocale,
               onChanged: (value) => value != null ? onChanged(value) : null,
-              activeColor: const Color(0xFF000000),
+              activeColor: Theme.of(context).colorScheme.onSurface,
             ),
             title: Text(
               lang['name'] as String,
@@ -308,7 +310,7 @@ class _ThemeSelector extends StatelessWidget {
               value: mode,
               groupValue: currentTheme,
               onChanged: (value) => value != null ? onChanged(value) : null,
-              activeColor: const Color(0xFF000000),
+              activeColor: Theme.of(context).colorScheme.onSurface,
             ),
             title: Row(
               children: [
@@ -369,8 +371,8 @@ class _TextScaleSlider extends StatelessWidget {
           const SizedBox(height: 8),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: const Color(0xFF000000),
-              thumbColor: const Color(0xFF000000),
+              activeTrackColor: Theme.of(context).colorScheme.onSurface,
+              thumbColor: Theme.of(context).colorScheme.onSurface,
               inactiveTrackColor: Colors.grey[300],
             ),
             child: Slider(
@@ -438,7 +440,7 @@ class _SystemFontSwitch extends StatelessWidget {
           Switch(
             value: useSystemFont,
             onChanged: onChanged,
-            activeColor: const Color(0xFF000000),
+            activeColor: Theme.of(context).colorScheme.onSurface,
           ),
         ],
       ),
