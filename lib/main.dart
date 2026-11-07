@@ -19,7 +19,6 @@ void main() async {
   final platform = Platform.isIOS ? 'IOS' : 'ANDROID';
   print('🎯 Buscando variables para plataforma: $platform');
 
-  print('API Key: ${dotenv.get('API_KEY_$platform')}');
   final apiKey = dotenv.env['API_KEY_$platform']!;
   final appId = dotenv.env['APP_ID_$platform']!;
   final senderId = dotenv.env['SENDER_ID_$platform']!;

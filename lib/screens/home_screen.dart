@@ -22,10 +22,13 @@ final fiestaProvider = FutureProvider.autoDispose<fiesta.Fiesta?>((ref) async {
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  // Función para verificar si la fecha corresponde al sexto domingo de Adviento
-  bool _esSextoDomingoAdviento(DateTime date) {
+  // Fiestas cuyos textos están revisados y se pueden abrir por ahora
+  static const Set<String> _fiestasDisponibles = {'adv1'};
+
+  // Indica si la fiesta que corresponde a la fecha ya se puede abrir
+  bool _esFiestaDisponible(DateTime date) {
     final codigo = LiturgicalCalendar.getFiestaDesde(date);
-    return codigo == 'adv6';
+    return _fiestasDisponibles.contains(codigo);
   }
 
   @override
@@ -34,8 +37,8 @@ class HomeScreen extends ConsumerWidget {
     final fiestaAsync = ref.watch(fiestaProvider);
     final currentLocale = ref.watch(localeProvider); // Idioma actual
 
-    // Verificar si es el sexto domingo de Adviento
-    final esAccesible = _esSextoDomingoAdviento(selectedDate);
+    // Verificar si la fiesta de la fecha elegida ya se puede abrir
+    final esAccesible = _esFiestaDisponible(selectedDate);
 
     // Usar el provider existente para manejar el locale del calendario
     final calendarLocale = ref.watch(calendarLocaleForTableCalendarProvider);
@@ -59,9 +62,15 @@ class HomeScreen extends ConsumerWidget {
           SettingsAppBarButton(),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
+      // Se desplaza si no cabe, y se centra si sobra espacio
+      body: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: (constraints.maxHeight - 48).clamp(0.0, double.infinity),
+            ),
+            child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
 
@@ -107,6 +116,8 @@ class HomeScreen extends ConsumerWidget {
                 },
 
                 calendarFormat: CalendarFormat.month,
+                // Deja el gesto vertical libre para poder desplazar la pantalla
+                availableGestures: AvailableGestures.horizontalSwipe,
                 availableCalendarFormats: const {
                   CalendarFormat.month: '',
                 },
@@ -139,8 +150,8 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 40),
 
               // Texto indicativo de la fiesta
-              SizedBox(
-                height: 50,
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 50),
                 child: fiestaAsync.when(
                   data: (fiesta) {
                     if (fiesta == null) {
@@ -187,7 +198,7 @@ class HomeScreen extends ConsumerWidget {
                       letterSpacing: 1.1,
                     ),
                   ),
-                  // Sólo se habilita si es el 6º domingo de Adviento
+                  // Sólo se habilita si la fiesta ya se puede abrir
                   onPressed: esAccesible
                       ? fiestaAsync.maybeWhen(
                         data: (fiesta) => fiesta != null
@@ -207,7 +218,9 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
+          ),
         ),
+      ),
     );
   }
 

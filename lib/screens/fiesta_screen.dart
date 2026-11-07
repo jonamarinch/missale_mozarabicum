@@ -24,16 +24,14 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
   List<Texto> _textos = [];
   bool _isLoading = true;
 
-  // static const Duration cacheDuration = Duration(days: 100); // Tiempo válido
-  static const Duration cacheDuration = Duration(days: 36500); // Tiempo válido
-
   @override
   void initState() {
     super.initState();
     _loadTextos();
   }
 
-  // Carga textos desde caché o Firestore
+  // Carga los textos de Firestore para que las correcciones se vean enseguida.
+  // La copia guardada solo se usa si no se puede conectar.
   Future<void> _loadTextos() async {
     print('[TAG] Entrando en _loadTextos');
 
@@ -43,39 +41,33 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     final cacheKey = 'textos_${widget.fiesta.codigo}_$languageCode';
-    final timestampKey = '${cacheKey}_timestamp';
 
-    // Tiempo actual para comparar
-    final now = DateTime.now();
-
-    // Verifica si hay caché y si está caducado
-    if (prefs.containsKey(cacheKey) && prefs.containsKey(timestampKey)) {
-      final lastSaved = DateTime.tryParse(prefs.getString(timestampKey) ?? '');
-      final isValid = lastSaved != null && now.difference(lastSaved) <= cacheDuration;
-
-      if (isValid) {
-        print('[TAG] Cargando desde caché para idioma: $languageCode');
-        final jsonList = jsonDecode(prefs.getString(cacheKey)!);
-        _textos = List<Texto>.from(jsonList.map((e) => Texto.fromFirestore(e)));
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-    }
-
-    // Si no hay caché válido, descarga desde Firestore
     final fiestaId = widget.fiesta.codigo;
     final tiempoId = widget.fiesta.tiempo;
 
     print('[TAG] Consultando Firestore: fiestaId=$fiestaId, tiempoId=$tiempoId, idioma=$languageCode');
 
-    // Firestore queries
-    final textosSnap = await FirebaseFirestore.instance
-        .collection('textos')
-        .where('asoc', arrayContainsAny: [fiestaId, tiempoId])
-        .orderBy('orden')
-        .get();
+    final QuerySnapshot<Map<String, dynamic>> textosSnap;
+    try {
+      textosSnap = await FirebaseFirestore.instance
+          .collection('textos')
+          .where('asoc', arrayContainsAny: [fiestaId, tiempoId])
+          .orderBy('orden')
+          .get();
+    } catch (e) {
+      print('[TAG] No se pudo consultar Firestore: $e');
+      final copia = prefs.getString(cacheKey);
+      if (copia != null) {
+        print('[TAG] Cargando copia guardada para idioma: $languageCode');
+        _textos = List<Texto>.from(jsonDecode(copia).map((e) => Texto.fromFirestore(e)));
+      }
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     print('[TAG] textosSnap.docs.length: ${textosSnap.docs.length}');
 
@@ -104,14 +96,14 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
     // Guardamos los textos en caché con el idioma
     final jsonTextos = jsonEncode(_textos.map((t) => t.toJson()).toList());
     await prefs.setString(cacheKey, jsonTextos);
-    // Guardamos la fecha/hora de guardado
-    await prefs.setString(timestampKey, DateTime.now().toIso8601String());
 
     print('[TAG] Hecho - guardado en caché para idioma: $languageCode');
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
