@@ -50,7 +50,8 @@ class Texto {
   /// Texto que se muestra según idioma y edición. El español de la ICAE no se usa en la original.
   String textoPara(String languageCode, String edicion) {
     if (languageCode == 'la') return txt_la;
-    if (edicion == 'original') return languageCode == 'es' ? originalEs : '';
+    // El título de la fiesta no tiene edición: vale para todas
+    if (edicion == 'original' && ediciones.isNotEmpty) return languageCode == 'es' ? originalEs : '';
     return getTextForLanguage(languageCode);
   }
 
