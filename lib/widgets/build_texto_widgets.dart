@@ -8,8 +8,97 @@ final RegExp _marca = RegExp(r'<([rkbni]+)>(.*?)</>', dotAll: true);
 /// Símbolos que siempre se dibujan en rojo y los que se reducen a la mitad
 final RegExp _simbolos = RegExp('[✠♦]');
 
-/// Construye el texto aplicando las marcas de formato sobre el estilo de su tipo
+/// Elemento de lista del Word: la viñeta indica el nivel (● primero, ○ segundo, ■ tercero)
+final RegExp _elementoLista = RegExp(r'^((?:<[rkbni]+>)?)([●○■]) ');
+const _vinetas = ['●', '○', '■'];
+
+/// Construye el texto aplicando las marcas de formato sobre el estilo de su tipo.
+/// Si lleva líneas con viñeta, las dibuja con sangría francesa como en el Word.
 Widget buildTextoMarcado(
+  String raw,
+  TipoTextoStyle cfg, {
+  required BuildContext context,
+  bool recortarArriba = false,
+  bool recortarAbajo = false,
+}) {
+  final lineas = _partirLineas(raw);
+  if (!lineas.any(_elementoLista.hasMatch)) {
+    return _textoMarcado(raw, cfg,
+        context: context, recortarArriba: recortarArriba, recortarAbajo: recortarAbajo);
+  }
+
+  // Sangrías del Word: la viñeta de cada nivel va donde empieza el texto del nivel anterior
+  final paso = (cfg.style.fontSize ?? 16) * 1.5;
+  final hijos = <Widget>[];
+  final normales = <String>[];
+  void cerrarNormales() {
+    if (normales.isEmpty) return;
+    hijos.add(_textoMarcado(normales.join('\n'), cfg, context: context));
+    normales.clear();
+  }
+
+  for (final linea in lineas) {
+    final m = _elementoLista.firstMatch(linea);
+    if (m == null) {
+      normales.add(linea);
+      continue;
+    }
+    cerrarNormales();
+    final nivel = _vinetas.indexOf(m.group(2)!);
+    final apertura = m.group(1)!;
+    final resto = apertura + linea.substring(m.end);
+    hijos.add(Padding(
+      padding: EdgeInsets.only(left: paso * 2 * nivel),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: paso,
+            child: _textoMarcado(
+              apertura.isEmpty ? m.group(2)! : '$apertura${m.group(2)!}</>',
+              cfg, context: context,
+            ),
+          ),
+          Expanded(
+            child: _textoMarcado(
+              apertura.isNotEmpty && resto == apertura ? '' : _cerrarSiAbierta(resto),
+              cfg, context: context,
+            ),
+          ),
+        ],
+      ),
+    ));
+  }
+  cerrarNormales();
+  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: hijos);
+}
+
+/// Parte el texto en líneas, cerrando y reabriendo las marcas que pasan de una línea a otra
+List<String> _partirLineas(String raw) {
+  final salida = <String>[];
+  String? abierta;
+  for (var linea in raw.split('\n')) {
+    if (abierta != null) linea = '<$abierta>$linea';
+    abierta = null;
+    final ultimaApertura = RegExp(r'<([rkbni]+)>').allMatches(linea).lastOrNull;
+    final ultimoCierre = linea.lastIndexOf('</>');
+    if (ultimaApertura != null && ultimaApertura.start > ultimoCierre) {
+      abierta = ultimaApertura.group(1);
+      linea = '$linea</>';
+    }
+    salida.add(linea);
+  }
+  return salida;
+}
+
+/// Una marca abierta sin cerrar se cierra al final de la línea
+String _cerrarSiAbierta(String linea) {
+  final ultimaApertura = RegExp(r'<([rkbni]+)>').allMatches(linea).lastOrNull;
+  if (ultimaApertura != null && ultimaApertura.start > linea.lastIndexOf('</>')) return '$linea</>';
+  return linea;
+}
+
+Widget _textoMarcado(
   String raw,
   TipoTextoStyle cfg, {
   required BuildContext context,
