@@ -22,23 +22,11 @@ final fiestaProvider = FutureProvider.autoDispose<fiesta.Fiesta?>((ref) async {
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  // Fiestas cuyos textos están revisados y se pueden abrir por ahora
-  static const Set<String> _fiestasDisponibles = {'adv1'};
-
-  // Indica si la fiesta que corresponde a la fecha ya se puede abrir
-  bool _esFiestaDisponible(DateTime date) {
-    final codigo = LiturgicalCalendar.getFiestaDesde(date);
-    return _fiestasDisponibles.contains(codigo);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
     final fiestaAsync = ref.watch(fiestaProvider);
     final currentLocale = ref.watch(localeProvider); // Idioma actual
-
-    // Verificar si la fiesta de la fecha elegida ya se puede abrir
-    final esAccesible = _esFiestaDisponible(selectedDate);
 
     // Usar el provider existente para manejar el locale del calendario
     final calendarLocale = ref.watch(calendarLocaleForTableCalendarProvider);
@@ -206,9 +194,8 @@ class HomeScreen extends ConsumerWidget {
                       letterSpacing: 1.1,
                     ),
                   ),
-                  // Sólo se habilita si la fiesta ya se puede abrir
-                  onPressed: esAccesible
-                      ? fiestaAsync.maybeWhen(
+                  // Se puede entrar en cualquier fiesta que el calendario encuentre
+                  onPressed: fiestaAsync.maybeWhen(
                         data: (fiesta) => fiesta != null
                           ? () {
                             Navigator.push(
@@ -220,7 +207,7 @@ class HomeScreen extends ConsumerWidget {
                           }
                         : null,
                     orElse: () => null,
-                  ) : null, // null desactiva el botón
+                  ), // null desactiva el botón
                   child: Text(_getContinuarText(currentLocale.languageCode)),
                 ),
               ),
