@@ -1,37 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:missale_mozarabicum/services/liturgical_calendar.dart';
-import 'package:missale_mozarabicum/models/fiesta.dart' as fiesta;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+import 'package:missale_mozarabicum/models/fiesta.dart' as fiesta;
 import 'package:missale_mozarabicum/screens/fiesta_screen.dart';
+import 'package:missale_mozarabicum/services/liturgical_calendar.dart';
 import 'package:missale_mozarabicum/widgets/settings_botton.dart';
 import 'package:missale_mozarabicum/providers/settings_selectors.dart';
 import 'package:missale_mozarabicum/providers/calendar_locale_fallback.dart';
 
-// Provider para seleccionar fecha
-final selectedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
-// Provider para la fiesta
-final fiestaProvider = FutureProvider.autoDispose<fiesta.Fiesta?>((ref) async {
-  final date = ref.watch(selectedDateProvider);
-  final codigo = LiturgicalCalendar.getFiestaDesde(date);
-  if (codigo.isEmpty) return null;
-  return fiesta.getFiesta(codigo);
+/// Fiestas que se pueden abrir por ahora: solo las revisadas y cargadas.
+/// El resto del calendario no se muestra (decisión del usuario, 14/11/2026).
+const List<String> fiestasDisponibles = ['adv1', 'adv2'];
+
+/// Datos de las fiestas disponibles, en el orden de la lista
+final fiestasDisponiblesProvider = FutureProvider<List<fiesta.Fiesta>>((ref) async {
+  final lista = await Future.wait(fiestasDisponibles.map(fiesta.getFiesta));
+  return lista.whereType<fiesta.Fiesta>().toList();
 });
 
-/// Pantalla principal donde se elige una fecha y se muestra la fiesta correspondiente
+/// Pantalla principal: se elige uno de los domingos disponibles
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedDate = ref.watch(selectedDateProvider);
-    final fiestaAsync = ref.watch(fiestaProvider);
-    final currentLocale = ref.watch(localeProvider); // Idioma actual
-
-    // Usar el provider existente para manejar el locale del calendario
-    final calendarLocale = ref.watch(calendarLocaleForTableCalendarProvider);
-
-    // Configurar el listener para recordar el último locale válido
+    final fiestasAsync = ref.watch(fiestasDisponiblesProvider);
+    final idioma = ref.watch(localeProvider).languageCode;
+    // El latín no tiene formato de fecha propio: se usa el último idioma válido
+    final localeFechas = ref.watch(calendarLocaleForTableCalendarProvider);
     rememberLastValidCalendarLocale(ref);
 
     return Scaffold(
@@ -45,10 +41,7 @@ class HomeScreen extends ConsumerWidget {
             letterSpacing: 1.2,
           ),
         ),
-        // Botón de configuración en el AppBar
-        actions: const [
-          SettingsAppBarButton(),
-        ],
+        actions: const [SettingsAppBarButton()],
       ),
       // Se desplaza si no cabe, y se centra si sobra espacio
       body: LayoutBuilder(
@@ -59,215 +52,132 @@ class HomeScreen extends ConsumerWidget {
               minHeight: (constraints.maxHeight - 48).clamp(0.0, double.infinity),
             ),
             child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-
-              // Separador visual grande con cruz
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Divider(
-                        thickness: 2,
-                        color: Color(0xFFc00000),
-                        endIndent: 8,
-                      ),
-                    ),
-                    const Text(
-                      '✠',
-                      style: TextStyle(
-                        fontSize: 32,
-                        color: Color(0xFFc00000),
-                      ),
-                    ),
-                    const Expanded(
-                      child: Divider(
-                        thickness: 2,
-                        color: Color(0xFFc00000),
-                        indent: 8,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Calendario
-              TableCalendar(
-                locale: calendarLocale,
-                firstDay: DateTime(2000),
-                lastDay: DateTime(2100),
-                focusedDay: selectedDate,
-                selectedDayPredicate: (day) => isSameDay(day, selectedDate),
-                onDaySelected: (day, focusedDay) {
-                  ref.read(selectedDateProvider.notifier).state = day;
-                },
-
-                calendarFormat: CalendarFormat.month,
-                // Deja el gesto vertical libre para poder desplazar la pantalla
-                availableGestures: AvailableGestures.horizontalSwipe,
-                availableCalendarFormats: const {
-                  CalendarFormat.month: '',
-                },
-
-                sixWeekMonthsEnforced: true,
-
-                headerVisible: true, // Controla la visibilidad de la cabecera (mes, botones)
-
-                headerStyle: HeaderStyle(
-                  titleCentered: true,
-                  titleTextStyle: TextStyle(fontSize: 17, color: Theme.of(context).colorScheme.onSurface),
-                  leftChevronIcon: Icon(Icons.chevron_left, color: Theme.of(context).colorScheme.onSurface),
-                  rightChevronIcon: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface),
-                ),
-                daysOfWeekStyle: DaysOfWeekStyle(
-                  weekdayStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
-                  weekendStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-                ),
-
-                calendarStyle: CalendarStyle(
-                  outsideDaysVisible: false,
-                  isTodayHighlighted: false,
-                  selectedDecoration: BoxDecoration(
-                    color: Colors.transparent,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.blue),
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Separador visual grande con cruz
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: Row(
+                    children: [
+                      Expanded(child: Divider(thickness: 2, color: Color(0xFFc00000), endIndent: 8)),
+                      Text('✠', style: TextStyle(fontSize: 32, color: Color(0xFFc00000))),
+                      Expanded(child: Divider(thickness: 2, color: Color(0xFFc00000), indent: 8)),
+                    ],
                   ),
-                  todayDecoration: BoxDecoration(
-                    color: Colors.transparent,
-                  ),
-                  // Colores del tema, para que se lean también en modo oscuro
-                  defaultTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                  weekendTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)),
-                  selectedTextStyle: TextStyle(color: Colors.blue),
                 ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // Texto indicativo de la fiesta
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 50),
-                child: fiestaAsync.when(
-                  data: (fiesta) {
-                    if (fiesta == null) {
-                      return _getNoFiestaText(currentLocale.languageCode);
-                    }
-
-                    final nombreFiesta = fiesta.getNombreForLanguage(currentLocale.languageCode);
-                    return Text(
-                      _getFiestaProximaText(currentLocale.languageCode, nombreFiesta),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontFamily: 'Cardo',
-                      ),
-                      textAlign: TextAlign.center,
-                    );
-                  },
-                  loading: () => const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                Text(
+                  _elegirTexto(idioma),
+                  style: const TextStyle(fontSize: 20, fontFamily: 'Cardo'),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                fiestasAsync.when(
+                  data: (fiestas) => fiestas.isEmpty
+                      ? Text(_sinConexionTexto(idioma), textAlign: TextAlign.center)
+                      : Column(
+                          children: [
+                            for (final f in fiestas)
+                              _TarjetaFiesta(
+                                datos: f,
+                                nombre: f.getNombreForLanguage(idioma),
+                                fecha: _fechaTexto(f.codigo, localeFechas),
+                              ),
+                          ],
+                        ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
+                  ),
                   error: (e, _) => Text(
-                    'Error: $e',
+                    _sinConexionTexto(idioma),
                     style: const TextStyle(color: Colors.red),
                     textAlign: TextAlign.center,
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // Botón para acceder a la siguiente pantalla
-              FractionallySizedBox(
-                widthFactor: 0.4, // Ocupa el 40% del ancho del padre
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFb8aaa1), // Color acorde a tu estética
-                    foregroundColor: Colors.white, // Color del texto
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), // Esquinas redondeadas
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    textStyle: const TextStyle(
-                      fontFamily: 'Cardo',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  // Se puede entrar en cualquier fiesta que el calendario encuentre
-                  onPressed: fiestaAsync.maybeWhen(
-                        data: (fiesta) => fiesta != null
-                          ? () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FiestaScreen(fiesta: fiesta),
-                              ),
-                            );
-                          }
-                        : null,
-                    orElse: () => null,
-                  ), // null desactiva el botón
-                  child: Text(_getContinuarText(currentLocale.languageCode)),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // Funciones auxiliares para los textos traducidos
-  Widget _getNoFiestaText(String languageCode) {
-    final text = _getNoFiestaString(languageCode);
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 20,
-        fontFamily: 'Cardo',
+  /// Próxima fecha de la fiesta (hoy incluido), en el idioma de la app
+  String _fechaTexto(String codigo, String locale) {
+    final fecha = LiturgicalCalendar.proximaFecha(codigo, DateTime.now());
+    if (fecha == null) return '';
+    try {
+      return DateFormat.yMMMMEEEEd(locale).format(fecha);
+    } catch (_) {
+      return DateFormat.yMMMMEEEEd('es').format(fecha);
+    }
+  }
+
+  String _elegirTexto(String idioma) {
+    switch (idioma) {
+      case 'en':
+        return 'Choose the Mass';
+      case 'la':
+        return 'Missam elige';
+      default:
+        return 'Elige la Misa';
+    }
+  }
+
+  String _sinConexionTexto(String idioma) {
+    switch (idioma) {
+      case 'en':
+        return 'Could not connect. Check your connection and try again.';
+      case 'la':
+        return 'Conexio deest.';
+      default:
+        return 'No se ha podido conectar. Comprueba la conexión y vuelve a intentarlo.';
+    }
+  }
+}
+
+/// Botón grande con el nombre de la fiesta y su fecha: al tocarlo se abre la Misa
+class _TarjetaFiesta extends StatelessWidget {
+  final fiesta.Fiesta datos;
+  final String nombre;
+  final String fecha;
+
+  const _TarjetaFiesta({required this.datos, required this.nombre, required this.fecha});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFb8aaa1),
+            foregroundColor: Colors.white,
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          ),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => FiestaScreen(fiesta: datos)),
+          ),
+          child: Column(
+            children: [
+              Text(
+                nombre,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontFamily: 'Cardo', fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              if (fecha.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(fecha, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+              ],
+            ],
+          ),
+        ),
       ),
-      textAlign: TextAlign.center,
     );
-  }
-
-  String _getNoFiestaString(String languageCode) {
-    switch (languageCode) {
-      case 'es':
-        return "No se ha encontrado fiesta";
-      case 'en':
-        return "No feast found";
-      case 'la':
-        return "Festum non inventum";
-      default:
-        return "No se ha encontrado fiesta";
-    }
-  }
-
-  String _getFiestaProximaText(String languageCode, String nombreFiesta) {
-    switch (languageCode) {
-      case 'es':
-        return "Fiesta próxima: $nombreFiesta";
-      case 'en':
-        return "Next feast: $nombreFiesta";
-      case 'la':
-        return "Festum proximum: $nombreFiesta";
-      default:
-        return "Fiesta próxima: $nombreFiesta";
-    }
-  }
-
-  String _getContinuarText(String languageCode) {
-    switch (languageCode) {
-      case 'es':
-        return "Continuar";
-      case 'en':
-        return "Continue";
-      case 'la':
-        return "Procedere";
-      default:
-        return "Continuar";
-    }
   }
 }

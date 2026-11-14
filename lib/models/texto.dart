@@ -16,6 +16,8 @@ class Texto {
   final int? seccion;
   /// Traducción al español de la edición original
   final String originalEs;
+  /// Traducción al inglés de la edición original (equivalente a su español)
+  final String originalEn;
   /// Líneas en blanco que hay antes del texto en el Word (español y latín)
   final int hueco;
   final int huecoLa;
@@ -34,6 +36,7 @@ class Texto {
     this.tipoLa,
     this.seccion,
     this.originalEs = '',
+    this.originalEn = '',
     this.hueco = 0,
     this.huecoLa = 0,
   });
@@ -52,12 +55,24 @@ class Texto {
     );
   }
 
-  /// Texto que se muestra según idioma y edición. El español de la ICAE no se usa en la original.
+  /// Texto que se muestra según idioma y edición. La original tiene su propio español e inglés,
+  /// ceñidos a su latín: nunca usa los de la ICAE.
   String textoPara(String languageCode, String edicion) {
     if (languageCode == 'la') return txt_la;
     // El título de la fiesta no tiene edición: vale para todas
-    if (edicion == 'original' && ediciones.isNotEmpty) return languageCode == 'es' ? originalEs : '';
+    if (edicion == 'original' && ediciones.isNotEmpty) {
+      return languageCode == 'es' ? originalEs : languageCode == 'en' ? originalEn : '';
+    }
     return getTextForLanguage(languageCode);
+  }
+
+  /// Lámina del Word: un texto que solo contiene [[lamina:nombre.png,…]] se dibuja como imagen
+  static final RegExp _lamina = RegExp(r'^\[\[lamina:([^\]]+)\]\]$');
+
+  /// Nombres de las láminas si el texto es una lámina; vacío si no lo es
+  static List<String> laminasDe(String texto) {
+    final m = _lamina.firstMatch(texto.trim());
+    return m == null ? const [] : m.group(1)!.split(',');
   }
 
   /// Líneas en blanco antes del texto, según el idioma
@@ -100,6 +115,7 @@ class Texto {
     'tipo_la': tipoLa,
     'seccion': seccion,
     'original_es': originalEs,
+    'original_en': originalEn,
     'hueco': hueco,
     'hueco_la': huecoLa,
   };
@@ -119,6 +135,7 @@ class Texto {
       tipoLa: data['tipo_la'] as int?,
       seccion: data['seccion'] as int?,
       originalEs: data['original_es'] ?? '',
+      originalEn: data['original_en'] ?? '',
       hueco: (data['hueco'] as num?)?.toInt() ?? 0,
       huecoLa: (data['hueco_la'] as num?)?.toInt() ?? 0,
     );

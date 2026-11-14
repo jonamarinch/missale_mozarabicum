@@ -242,6 +242,7 @@ class _LanguageSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final languages = [
       {'code': 'es_ES', 'name': 'Español', 'locale': const Locale('es', 'ES')},
+      {'code': 'en_US', 'name': 'English', 'locale': const Locale('en', 'US')},
       {'code': 'la_VA', 'name': 'Latinum', 'locale': const Locale('la', 'VA')},
     ];
 

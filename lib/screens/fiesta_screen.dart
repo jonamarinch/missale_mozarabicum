@@ -137,7 +137,7 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
     final idiomaElegido = ref.watch(localeProvider).languageCode;
     final edicion = ref.watch(edicionProvider);
 
-    // La edición original aún no tiene su propia traducción: mientras tanto se muestra el latín
+    // Si la edición original no tuviera traducción en este idioma, se muestra el latín
     final sinTraduccion = edicion == edicionOriginal &&
         idiomaElegido != 'la' &&
         !_textos.any((t) => t.perteneceA(edicion) && t.ediciones.isNotEmpty &&
@@ -183,7 +183,9 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                             child: Text(
-                              'La traducción al español de la edición original está en preparación. Mientras tanto se muestra el texto latino.',
+                              idiomaElegido == 'en'
+                                  ? 'The English translation of the original edition is in preparation. Meanwhile the Latin text is shown.'
+                                  : 'La traducción de la edición original está en preparación. Mientras tanto se muestra el texto latino.',
                               style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor),
                               textAlign: TextAlign.center,
                             ),
@@ -233,7 +235,11 @@ class _BuscadorMisa extends SearchDelegate<int?> {
   final List<Texto> textos;
   final String idioma;
   late final List<String> _planos = [
-    for (final t in textos) Texto.sinMarcas(t.textoPara(idioma, edicionDe(t))).replaceAll('\n', ' '),
+    // Las láminas no tienen texto que buscar
+    for (final t in textos)
+      Texto.laminasDe(t.textoPara(idioma, edicionDe(t))).isNotEmpty
+          ? ''
+          : Texto.sinMarcas(t.textoPara(idioma, edicionDe(t))).replaceAll('\n', ' '),
   ];
 
   _BuscadorMisa(this.textos, this.idioma)

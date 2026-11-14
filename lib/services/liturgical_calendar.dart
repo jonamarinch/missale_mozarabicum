@@ -124,6 +124,21 @@ class LiturgicalCalendar {
     return 'No encontrada';
   }
 
+  /// Próxima fecha (hoy incluido) de un domingo de Adviento ('adv1'…'adv6').
+  /// Si ya pasó este año, la del año siguiente. Para otras fiestas devuelve null.
+  static DateTime? proximaFecha(String codigo, DateTime desde) {
+    final m = RegExp(r'^adv([1-6])$').firstMatch(codigo);
+    if (m == null) return null;
+    final semanas = int.parse(m.group(1)!) - 1;
+    final hoy = DateTime(desde.year, desde.month, desde.day);
+    for (final year in [desde.year, desde.year + 1]) {
+      final adv1 = _primerDomingoAdviento(year, DateTime(year, 12, 25));
+      final fecha = DateTime(adv1.year, adv1.month, adv1.day + 7 * semanas);
+      if (!fecha.isBefore(hoy)) return fecha;
+    }
+    return null;
+  }
+
   /// Calcula el primer domingo de Adviento (6 domingos antes de Navidad)
   static DateTime _primerDomingoAdviento(int year, navidad) {
     final domingoNavidad = navidad.subtract(Duration(days: navidad.weekday % 7));

@@ -10,9 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String edicionOriginal = 'original';
 const String edicionIcae = 'icae';
 
-/// Idiomas disponibles por ahora: el inglés volverá cuando estén traducidos los textos.
+/// Idiomas disponibles: español, inglés y latín (el inglés, desde el 14/11/2026).
 Locale _idiomaDisponible(String? languageCode, String? countryCode) {
   if (languageCode == 'la') return const Locale('la', 'VA');
+  if (languageCode == 'en') return const Locale('en', 'US');
   return const Locale('es', 'ES');
 }
 
@@ -107,7 +108,7 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     return stored;
   }
 
-  /// Empieza en español, salvo que el sistema esté en latín.
+  /// Empieza en el idioma del sistema si es inglés o latín; si no, en español.
   Locale _systemLocaleOrFallback() {
     final ui.Locale sys = ui.PlatformDispatcher.instance.locales.isNotEmpty
         ? ui.PlatformDispatcher.instance.locales.first

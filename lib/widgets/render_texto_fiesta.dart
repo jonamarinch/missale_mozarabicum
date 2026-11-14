@@ -32,6 +32,72 @@ Widget renderTextoFiesta({
 /// Alto de una línea en blanco del Word
 const double _altoLineaBlanca = 18.0;
 
+/// Alto con el que se ven las láminas; al tocarlas se abren a pantalla completa
+const double _altoLamina = 210.0;
+
+/// Láminas del Word (grabados del altar, ruedas de la fracción), centradas y una junto a otra
+class _Laminas extends StatelessWidget {
+  final List<String> nombres;
+
+  const _Laminas({required this.nombres});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: _minVerticalSpacing * 2),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          for (final nombre in nombres)
+            GestureDetector(
+              onTap: () => _ampliar(context, nombre),
+              child: Image.asset(
+                'assets/laminas/$nombre',
+                height: _altoLamina,
+                fit: BoxFit.contain,
+                semanticLabel: 'Lámina',
+                // Si falta la imagen (app antigua) no se muestra nada
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _ampliar(BuildContext context, String nombre) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                maxScale: 5,
+                child: Center(child: Image.asset('assets/laminas/$nombre', fit: BoxFit.contain)),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: SafeArea(
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  tooltip: 'Cerrar',
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 Widget _renderTexto({
   required BuildContext context,
   required WidgetRef ref,
@@ -50,6 +116,12 @@ Widget _renderTexto({
 
   final rawText = texto.textoPara(languageCode, edicion);
   final text = rawText;
+
+  // Lámina del Word: se dibuja la imagen, igual en todos los idiomas
+  final laminas = Texto.laminasDe(rawText);
+  if (laminas.isNotEmpty) {
+    return _Laminas(nombres: laminas);
+  }
 
   final siguiente = index + 1 < textos.length ? textos[index + 1] : null;
   final tipoActual = tipo;
