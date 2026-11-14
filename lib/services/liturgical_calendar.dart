@@ -124,6 +124,14 @@ class LiturgicalCalendar {
     return 'No encontrada';
   }
 
+  /// Los seis domingos de Adviento del año indicado: fecha → código ('adv1'…'adv6')
+  static Map<DateTime, String> domingosAdviento(int year) {
+    final adv1 = _primerDomingoAdviento(year, DateTime(year, 12, 25));
+    return {
+      for (var i = 0; i < 6; i++) DateTime(adv1.year, adv1.month, adv1.day + 7 * i): 'adv${i + 1}',
+    };
+  }
+
   /// Próxima fecha (hoy incluido) de un domingo de Adviento ('adv1'…'adv6').
   /// Si ya pasó este año, la del año siguiente. Para otras fiestas devuelve null.
   static DateTime? proximaFecha(String codigo, DateTime desde) {

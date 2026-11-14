@@ -55,3 +55,8 @@ ios/Runner/GoogleService-Info.plist
 
 # Environment variables
 .env
+# Configuración de Firebase generada (tool/generar_firebase_options.py)
+lib/firebase_options.dart
+
+# Caché de despliegue de Firebase Hosting
+.firebase/

@@ -1,0 +1,3 @@
+# Que no aparezca en buscadores
+User-agent: *
+Disallow: /

@@ -7,36 +7,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:missale_mozarabicum/models/app_settings.dart';
 import 'package:missale_mozarabicum/services/estilos_factory.dart';
 import 'package:missale_mozarabicum/screens/home_screen.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:io' show Platform;
+import 'package:missale_mozarabicum/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
-
-  // Obtener configuración de Firebase
-  final platform = Platform.isIOS ? 'IOS' : 'ANDROID';
-  print('🎯 Buscando variables para plataforma: $platform');
-
-  final apiKey = dotenv.env['API_KEY_$platform']!;
-  final appId = dotenv.env['APP_ID_$platform']!;
-  final senderId = dotenv.env['SENDER_ID_$platform']!;
-  final projectId = dotenv.env['PROJECT_ID_$platform']!;
-
-  // Inicializar Firebase
-  await Firebase.initializeApp(
-    options: FirebaseOptions(
-      apiKey: apiKey!,
-      appId: appId!,
-      messagingSenderId: senderId!,
-      projectId: projectId!,
-      // para web:
-      // authDomain: dotenv.env['AUTH_DOMAIN'],
-      // storageBucket: dotenv.env['STORAGE_BUCKET'],
-      // measurementId: dotenv.env['MEASUREMENT_ID'],
-    ),
-  );
+  // Configuración de Firebase para Android, iOS y web (lib/firebase_options.dart, generado y fuera de Git)
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
 
   // Inicializar formatos de fecha para todos los idiomas que usas

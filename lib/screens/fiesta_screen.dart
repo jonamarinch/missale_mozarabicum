@@ -179,6 +179,15 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        if (!fiestasCargadas.contains(widget.fiesta.codigo))
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            child: Text(
+                              _avisoSinRevisar(idiomaElegido),
+                              style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         if (sinTraduccion)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -215,6 +224,18 @@ class _FiestaScreenState extends ConsumerState<FiestaScreen> {
                   ),
                 ),
     );
+  }
+}
+
+/// Aviso para las fiestas que aún no están cargadas: solo se ven los textos comunes
+String _avisoSinRevisar(String idioma) {
+  switch (idioma) {
+    case 'en':
+      return 'This Mass has not yet been reviewed: only the common texts are shown, without the proper texts of this Sunday.';
+    case 'la':
+      return 'Haec Missa nondum recognita est: tantum textus communes ostenduntur.';
+    default:
+      return 'Misa aún sin revisar: solo se muestran los textos comunes, sin los propios de este domingo.';
   }
 }
 

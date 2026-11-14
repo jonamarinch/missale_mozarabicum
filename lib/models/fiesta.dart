@@ -1,5 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Fiestas cargadas y revisadas en Firestore. Las demás de Adviento se pueden abrir desde el
+/// calendario, pero la Misa avisa de que aún solo tiene los textos comunes.
+const List<String> fiestasCargadas = ['adv1', 'adv2'];
+
 // Modelo de datos para representar una fiesta litúrgica
 class Fiesta {
   /// Código identificador único de la fiesta (ej: 'cua1', 'pas3', etc.)
