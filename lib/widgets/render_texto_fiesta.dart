@@ -111,7 +111,8 @@ Widget _renderTexto({
   final TipoTextoStyle cfg = ControlEstilos.estiloPorTipo(
     context,
     ref,
-    TipoTexto.values[tipo - 1],
+    // Un tipo desconocido (de una versión más nueva de los datos) se ve como texto normal
+    parseTipo(tipo),
   );
 
   final rawText = texto.textoPara(languageCode, edicion);
@@ -164,8 +165,8 @@ Widget _renderTexto({
       child: buildTextoMarcado(text, cfg3, context: context),
     );
   }
-  // Tipos 4, 5, 8: Rúbricas centradas y título
-  else if (tipo == 4 || tipo == 5 || tipo == 8) {
+  // Tipos 4, 5, 8, 9: Rúbricas centradas, título e indicaciones al pueblo
+  else if (tipo == 4 || tipo == 5 || tipo == 8 || tipo == 9) {
     return Padding(
       padding: EdgeInsets.only(
         top: pegadaArriba ? 0 : _minVerticalSpacing,

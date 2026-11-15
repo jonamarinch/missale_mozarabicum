@@ -7,11 +7,12 @@ enum TipoTexto {
   pueblo,                 // 6
   coro,                   // 7
   titulo,                 // 8
+  indicacionPueblo,       // 9: «EL PUEBLO DE PIE»…, en violeta
 }
 
 TipoTexto parseTipo(dynamic raw) {
   if (raw is int) {
-    final i = raw - 1; // tus datos vienen 1..8 → enum 0..7
+    final i = raw - 1; // los datos vienen 1..9 → enum 0..8
     if (i < 0 || i >= TipoTexto.values.length) return TipoTexto.normal;
     return TipoTexto.values[i];
   }
@@ -26,6 +27,7 @@ TipoTexto parseTipo(dynamic raw) {
       case 'pueblo': return TipoTexto.pueblo;
       case 'coro': return TipoTexto.coro;
       case 'titulo': return TipoTexto.titulo;
+      case 'indicacionPueblo': return TipoTexto.indicacionPueblo;
     }
   }
   return TipoTexto.normal;

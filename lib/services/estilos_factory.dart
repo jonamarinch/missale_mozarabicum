@@ -26,6 +26,8 @@ AppTextStyles buildAppTextStyles(
   // Colores que se adaptan al tema
   final primaryRed = isDarkMode ? const Color(0xFFFF6B6B) : const Color(0xFFB00020);
   final textColor = isDarkMode ? Colors.white : Colors.black87;
+  // Violeta litúrgico para las indicaciones de postura del pueblo
+  final violeta = isDarkMode ? const Color(0xFFC9A3E6) : const Color(0xFF6A2C91);
 
   return AppTextStyles({
     TipoTexto.normal: TipoTextoStyle(
@@ -79,6 +81,15 @@ AppTextStyles buildAppTextStyles(
         color: textColor,
       ),
       align: TextAlign.center,
+    ),
+    TipoTexto.indicacionPueblo: TipoTextoStyle(
+      style: f(base.titleMedium ?? const TextStyle(fontSize: 18)).copyWith(
+        color: violeta,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.0,
+      ),
+      align: TextAlign.center,
+      uppercase: true,
     ),
   });
 }
