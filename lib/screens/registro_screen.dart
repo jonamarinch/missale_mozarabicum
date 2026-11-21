@@ -6,7 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import 'package:missale_mozarabicum/services/liturgical_calendar.dart';
+import 'package:missale_mozarabicum/services/registro_informe.dart';
 import 'package:missale_mozarabicum/services/registro_service.dart';
 
 final _euros = NumberFormat.currency(locale: 'es_ES', symbol: '€', decimalDigits: 2);
@@ -208,6 +210,69 @@ class _Registro extends StatefulWidget {
 class _RegistroState extends State<_Registro> {
   final _servicio = RegistroService();
   int _anio = DateTime.now().year;
+  int _mes = DateTime.now().month;
+
+  /// Vista por meses (por defecto) o por años
+  bool _porMes = true;
+
+  PeriodoInforme get _periodo => PeriodoInforme(_anio, _porMes ? _mes : null);
+
+  void _mover(int paso) => setState(() {
+        if (!_porMes) {
+          _anio += paso;
+          return;
+        }
+        final f = DateTime(_anio, _mes + paso, 1);
+        _anio = f.year;
+        _mes = f.month;
+      });
+
+  /// Genera el informe del periodo que se está viendo y deja compartirlo, guardarlo o imprimirlo
+  Future<void> _informe() async {
+    final domingos = _domingos;
+    if (domingos == null) return;
+    final periodo = _periodo;
+    final opcion = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(title: Text('Informe en PDF · ${periodo.nombre}', style: const TextStyle(fontWeight: FontWeight.w600))),
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Compartir o guardar'),
+              subtitle: const Text('WhatsApp, correo, Drive, Archivos…'),
+              onTap: () => Navigator.pop(context, 'compartir'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.print),
+              title: const Text('Ver e imprimir'),
+              subtitle: const Text('También permite guardarlo como PDF'),
+              onTap: () => Navigator.pop(context, 'imprimir'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (opcion == null || !mounted) return;
+    final avisos = ScaffoldMessenger.of(context);
+    try {
+      final pdf = await informePdf(
+        periodo: periodo,
+        todos: domingos,
+        saldoInicialCent: _saldoInicial,
+        nombreDomingo: _nombreDomingo,
+      );
+      if (opcion == 'compartir') {
+        await Printing.sharePdf(bytes: pdf, filename: periodo.archivo);
+      } else {
+        await Printing.layoutPdf(onLayout: (_) async => pdf, name: periodo.archivo);
+      }
+    } catch (e) {
+      avisos.showSnackBar(SnackBar(content: Text('No se ha podido crear el informe: $e')));
+    }
+  }
 
   List<RegistroDomingo>? _domingos;
   int _saldoInicial = 0;
@@ -288,10 +353,13 @@ class _RegistroState extends State<_Registro> {
       final porId = {for (final r in domingos) idDeFecha(r.fecha): r};
       final hoy = DateTime.now();
       final limite = DateTime(hoy.year, hoy.month, hoy.day + 7); // hasta el próximo domingo
-      final fechas = domingosDelAnio(_anio).where((d) => d.isBefore(limite)).toList().reversed.toList();
-      final delAnio = domingos.where((r) => r.fecha.year == _anio).toList();
+      final periodo = _periodo;
+      bool dentro(DateTime d) => !d.isBefore(periodo.inicio) && !d.isAfter(periodo.fin);
+      final fechas = domingosDelAnio(_anio).where((d) => dentro(d) && d.isBefore(limite)).toList().reversed.toList();
+      final delPeriodo = domingos.where((r) => dentro(r.fecha)).toList();
       // Tras el último domingo apuntado (aunque se haya adelantado el próximo)
       final fondosHoy = fondosEnFecha(domingos, _saldoInicial, DateTime(9999));
+      final hayFuturo = periodo.fin.isBefore(DateTime(hoy.year, hoy.month, hoy.day));
 
       cuerpo = ListView(
         padding: const EdgeInsets.only(bottom: 24),
@@ -311,27 +379,45 @@ class _RegistroState extends State<_Registro> {
                         color: fondosHoy < 0 ? colores.error : null,
                       )),
                   const Divider(height: 24),
-                  _Resumen(anio: _anio, domingos: delAnio),
+                  _Resumen(
+                    titulo: periodo.nombre,
+                    domingos: delPeriodo,
+                    fondosAlTerminar: fondosEnFecha(domingos, _saldoInicial, periodo.fin),
+                  ),
                 ],
               ),
+            ),
+          ),
+          Center(
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: true, label: Text('Por meses'), icon: Icon(Icons.calendar_view_month)),
+                ButtonSegment(value: false, label: Text('Por años'), icon: Icon(Icons.calendar_today)),
+              ],
+              selected: {_porMes},
+              onSelectionChanged: (s) => setState(() => _porMes = s.first),
             ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () => setState(() => _anio--),
-              ),
-              Text('$_anio', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-              IconButton(
-                icon: const Icon(Icons.chevron_right),
-                onPressed: _anio >= hoy.year ? null : () => setState(() => _anio++),
-              ),
+              IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => _mover(-1)),
+              Text(periodo.nombre, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              // No se pasa de hoy: más adelante no hay domingos que apuntar
+              IconButton(icon: const Icon(Icons.chevron_right), onPressed: hayFuturo ? () => _mover(1) : null),
             ],
           ),
           if (fechas.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('No hay domingos.')),
-          for (final f in fechas)
+          for (final (n, f) in fechas.indexed) ...[
+            // En la vista por años, el nombre del mes separa los domingos
+            if (!_porMes && (n == 0 || fechas[n - 1].month != f.month))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+                child: Text(
+                  PeriodoInforme(f.year, f.month).nombre.split(' ').first,
+                  style: TextStyle(fontWeight: FontWeight.w700, color: colores.primary),
+                ),
+              ),
             _FilaDomingo(
               fecha: f,
               registro: porId[idDeFecha(f)],
@@ -353,6 +439,7 @@ class _RegistroState extends State<_Registro> {
                 ),
               ),
             ),
+          ],
         ],
       );
     }
@@ -361,6 +448,11 @@ class _RegistroState extends State<_Registro> {
       appBar: AppBar(
         title: const Text('Registro dominical'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Informe en PDF del periodo',
+            onPressed: domingos == null ? null : _informe,
+          ),
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'saldo') _editarSaldoInicial();
@@ -379,9 +471,10 @@ class _RegistroState extends State<_Registro> {
 }
 
 class _Resumen extends StatelessWidget {
-  final int anio;
+  final String titulo;
   final List<RegistroDomingo> domingos;
-  const _Resumen({required this.anio, required this.domingos});
+  final int fondosAlTerminar;
+  const _Resumen({required this.titulo, required this.domingos, required this.fondosAlTerminar});
 
   @override
   Widget build(BuildContext context) {
@@ -399,12 +492,14 @@ class _Resumen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('En $anio (${domingos.length} domingos apuntados)', style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text('$titulo (${domingos.length} ${domingos.length == 1 ? 'domingo apuntado' : 'domingos apuntados'})',
+            style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         fila('Media de asistentes', media(conAsist.map((r) => r.asistentes!).toList())),
         fila('Media de comulgantes', media(conCom.map((r) => r.comulgantes!).toList())),
         fila('Fondos recibidos', euros(recibido)),
         fila('Gastos', euros(gastos)),
+        fila('Fondos al terminar', euros(fondosAlTerminar)),
       ],
     );
   }
