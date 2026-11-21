@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:missale_mozarabicum/models/fiesta.dart' as fiesta;
 import 'package:missale_mozarabicum/screens/fiesta_screen.dart';
+import 'package:missale_mozarabicum/screens/registro_screen.dart';
 import 'package:missale_mozarabicum/services/liturgical_calendar.dart';
 import 'package:missale_mozarabicum/widgets/settings_botton.dart';
 import 'package:missale_mozarabicum/providers/settings_selectors.dart';
@@ -57,7 +59,19 @@ class HomeScreen extends ConsumerWidget {
           "Missale Mozarabicum",
           style: TextStyle(fontFamily: 'Cardo', fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: 1.2),
         ),
-        actions: const [SettingsAppBarButton()],
+        actions: [
+          // Registro dominical (datos privados): solo en la app del móvil, no en la web pública
+          if (!kIsWeb)
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
+              tooltip: 'Registro dominical',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RegistroScreen()),
+              ),
+            ),
+          const SettingsAppBarButton(),
+        ],
       ),
       // Se desplaza si no cabe, y se centra si sobra espacio
       body: LayoutBuilder(
