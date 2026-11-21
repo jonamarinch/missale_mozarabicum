@@ -68,7 +68,7 @@ class AppSettings {
       locale: _idiomaDisponible(loc?['languageCode'] as String?, loc?['countryCode'] as String?),
       themeMode: ThemeMode
           .values[(map['themeMode'] as num?)?.toInt() ?? ThemeMode.system.index],
-      textScale: (map['textScale'] as num?)?.toDouble() ?? 1.0,
+      textScale: escalaTextoValida((map['textScale'] as num?)?.toDouble() ?? 1.0),
       useSystemFont: map['useSystemFont'] as bool? ?? true,
       edicion: map['edicion'] == edicionOriginal ? edicionOriginal : edicionIcae,
     );
@@ -120,11 +120,11 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     await _prefs.setString(_kPrefsKey, s.toJson());
   }
 
-  Future<void> _update(FutureOr<AppSettings> Function(AppSettings) recipe) async {
+  Future<void> _update(FutureOr<AppSettings> Function(AppSettings) recipe, {bool guardar = true}) async {
     final current = state.value ?? const AppSettings();
     final next = await recipe(current);
     state = AsyncData(next);
-    unawaited(_persist(next));
+    if (guardar) unawaited(_persist(next));
   }
 
   // ---- Mutadores públicos ----
@@ -137,8 +137,11 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   Future<void> setThemeMode(ThemeMode mode) =>
       _update((s) => s.copyWith(themeMode: mode));
 
-  Future<void> setTextScale(double scale) =>
-      _update((s) => s.copyWith(textScale: scale.clamp(0.8, 1.6)));
+  /// Tamaño del texto litúrgico, del 50 % al 200 % en pasos del 1 %.
+  /// Mientras se arrastra la barra se aplica sin guardar (`guardar: false`), para que vaya fluido.
+  Future<void> setTextScale(double scale, {bool guardar = true}) => _update(
+      (s) => s.copyWith(textScale: escalaTextoValida(scale)),
+      guardar: guardar);
 
   Future<void> setUseSystemFont(bool value) =>
       _update((s) => s.copyWith(useSystemFont: value));
@@ -151,3 +154,10 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
   // Para compatibilidad con settings_dialog.dart
   Future<void> resetToDefaults() => reset();
 }
+
+/// Límites del tamaño del texto litúrgico
+const escalaTextoMin = 0.5;
+const escalaTextoMax = 2.0;
+
+/// Redondea al 1 % y lo deja dentro de los límites
+double escalaTextoValida(double v) => ((v.clamp(escalaTextoMin, escalaTextoMax) * 100).round()) / 100;

@@ -338,10 +338,11 @@ class _ThemeSelector extends StatelessWidget {
   }
 }
 
-/// Slider para escala de texto
-class _TextScaleSlider extends StatelessWidget {
+/// Barra para el tamaño del texto: del 50 % al 200 %, en pasos del 1 %, con movimiento continuo.
+/// Mientras se arrastra se aplica sin guardar; se guarda al soltar.
+class _TextScaleSlider extends StatefulWidget {
   final double currentScale;
-  final Function(double) onChanged;
+  final void Function(double escala, {bool guardar}) onChanged;
 
   const _TextScaleSlider({
     required this.currentScale,
@@ -349,7 +350,28 @@ class _TextScaleSlider extends StatelessWidget {
   });
 
   @override
+  State<_TextScaleSlider> createState() => _TextScaleSliderState();
+}
+
+class _TextScaleSliderState extends State<_TextScaleSlider> {
+  late double _valor = widget.currentScale.clamp(escalaTextoMin, escalaTextoMax);
+  bool _arrastrando = false;
+
+  @override
+  void didUpdateWidget(covariant _TextScaleSlider old) {
+    super.didUpdateWidget(old);
+    if (!_arrastrando) _valor = widget.currentScale.clamp(escalaTextoMin, escalaTextoMax);
+  }
+
+  void _paso(int porcentaje) {
+    final v = escalaTextoValida(_valor + porcentaje / 100);
+    setState(() => _valor = v);
+    widget.onChanged(v);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final porcentaje = (_valor * 100).round();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -363,26 +385,53 @@ class _TextScaleSlider extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Tamaño del texto'),
-              Text(
-                '${(currentScale * 100).round()}%',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              // Al tocar el porcentaje vuelve al 100 %
+              InkWell(
+                onTap: porcentaje == 100 ? null : () => _paso(100 - porcentaje),
+                child: Text('$porcentaje%', style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              activeTrackColor: Theme.of(context).colorScheme.onSurface,
-              thumbColor: Theme.of(context).colorScheme.onSurface,
-              inactiveTrackColor: Colors.grey[300],
-            ),
-            child: Slider(
-              value: currentScale,
-              min: 0.8,
-              max: 1.5,
-              divisions: 7,
-              onChanged: onChanged,
-            ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.remove),
+                tooltip: 'Más pequeño',
+                visualDensity: VisualDensity.compact,
+                onPressed: porcentaje <= escalaTextoMin * 100 ? null : () => _paso(-1),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: Theme.of(context).colorScheme.onSurface,
+                    thumbColor: Theme.of(context).colorScheme.onSurface,
+                    inactiveTrackColor: Colors.grey[300],
+                  ),
+                  // Sin divisiones: el botón se desliza sin saltos; el valor se redondea al 1 %
+                  child: Slider(
+                    value: _valor,
+                    min: escalaTextoMin,
+                    max: escalaTextoMax,
+                    onChangeStart: (_) => _arrastrando = true,
+                    onChanged: (v) {
+                      setState(() => _valor = v);
+                      widget.onChanged(v, guardar: false);
+                    },
+                    onChangeEnd: (v) {
+                      _arrastrando = false;
+                      widget.onChanged(v);
+                    },
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: 'Más grande',
+                visualDensity: VisualDensity.compact,
+                onPressed: porcentaje >= escalaTextoMax * 100 ? null : () => _paso(1),
+              ),
+            ],
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
