@@ -1,5 +1,5 @@
 // Pantalla del registro dominical (solo en la app del móvil, no en la web).
-// Pide iniciar sesión; solo las cuentas con el permiso `registro` ven y apuntan datos.
+// Pide la clave del registro; solo la cuenta con el permiso `registro` ve y apunta datos.
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -45,8 +45,12 @@ class RegistroScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Inicio de sesión
+// Inicio de sesión con una clave única (decisión del usuario, 21/11/2026): hay una sola
+// cuenta compartida, con correo fijo; solo se escribe la clave. La clave no está en el código:
+// se pone o se cambia desde el ordenador con src/clave_registro.js del importador.
 // ---------------------------------------------------------------------------
+
+const _correoRegistro = 'registro@missalemozarabicum.web.app';
 
 class _Acceso extends StatefulWidget {
   const _Acceso();
@@ -56,23 +60,19 @@ class _Acceso extends StatefulWidget {
 }
 
 class _AccesoState extends State<_Acceso> {
-  final _correo = TextEditingController();
   final _clave = TextEditingController();
   bool _ocupado = false;
+  bool _verClave = false;
   String? _error;
 
-  Future<void> _entrar({required bool crear}) async {
+  Future<void> _entrar() async {
+    if (_clave.text.isEmpty) return;
     setState(() {
       _ocupado = true;
       _error = null;
     });
     try {
-      final auth = FirebaseAuth.instance;
-      if (crear) {
-        await auth.createUserWithEmailAndPassword(email: _correo.text.trim(), password: _clave.text);
-      } else {
-        await auth.signInWithEmailAndPassword(email: _correo.text.trim(), password: _clave.text);
-      }
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: _correoRegistro, password: _clave.text);
     } on FirebaseAuthException catch (e) {
       setState(() => _error = _mensajeError(e.code));
     } finally {
@@ -80,38 +80,16 @@ class _AccesoState extends State<_Acceso> {
     }
   }
 
-  Future<void> _olvide() async {
-    final correo = _correo.text.trim();
-    if (correo.isEmpty) {
-      setState(() => _error = 'Escribe primero tu correo.');
-      return;
-    }
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: correo);
-      setState(() => _error = 'Te hemos enviado un correo para elegir una contraseña nueva.');
-    } on FirebaseAuthException catch (e) {
-      setState(() => _error = _mensajeError(e.code));
-    }
-  }
-
   String _mensajeError(String codigo) {
     switch (codigo) {
-      case 'invalid-email':
-        return 'El correo no es válido.';
-      case 'weak-password':
-        return 'La contraseña debe tener al menos 6 caracteres.';
-      case 'email-already-in-use':
-        return 'Ya existe una cuenta con ese correo: pulsa «Entrar».';
       case 'invalid-credential':
       case 'wrong-password':
       case 'user-not-found':
-        return 'Correo o contraseña incorrectos.';
+        return 'Clave incorrecta.';
       case 'network-request-failed':
         return 'No hay conexión a internet.';
       case 'too-many-requests':
         return 'Demasiados intentos. Espera un poco y vuelve a probar.';
-      case 'operation-not-allowed':
-        return 'El acceso con correo aún no está activado en Firebase.';
       default:
         return 'No se ha podido entrar ($codigo).';
     }
@@ -119,7 +97,6 @@ class _AccesoState extends State<_Acceso> {
 
   @override
   void dispose() {
-    _correo.dispose();
     _clave.dispose();
     super.dispose();
   }
@@ -131,42 +108,28 @@ class _AccesoState extends State<_Acceso> {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text(
-            'Estos datos son privados. Entra con tu cuenta para verlos o apuntarlos.',
-            textAlign: TextAlign.center,
-          ),
+          const Text('Estos datos son privados. Escribe la clave para verlos o apuntarlos.', textAlign: TextAlign.center),
           const SizedBox(height: 24),
           TextField(
-            controller: _correo,
-            keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-            decoration: const InputDecoration(labelText: 'Correo'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
             controller: _clave,
-            obscureText: true,
-            autofillHints: const [AutofillHints.password],
-            decoration: const InputDecoration(labelText: 'Contraseña'),
-            onSubmitted: (_) => _entrar(crear: false),
+            obscureText: !_verClave,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Clave',
+              suffixIcon: IconButton(
+                icon: Icon(_verClave ? Icons.visibility_off : Icons.visibility),
+                tooltip: _verClave ? 'Ocultar' : 'Mostrar',
+                onPressed: () => setState(() => _verClave = !_verClave),
+              ),
+            ),
+            onSubmitted: (_) => _entrar(),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ],
           const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _ocupado ? null : () => _entrar(crear: false),
-            child: const Text('Entrar'),
-          ),
-          TextButton(
-            onPressed: _ocupado ? null : () => _entrar(crear: true),
-            child: const Text('Crear cuenta'),
-          ),
-          TextButton(
-            onPressed: _ocupado ? null : _olvide,
-            child: const Text('He olvidado la contraseña'),
-          ),
+          ElevatedButton(onPressed: _ocupado ? null : _entrar, child: const Text('Entrar')),
         ],
       ),
     );
@@ -211,8 +174,7 @@ class _ComprobarPermisoState extends State<_ComprobarPermiso> {
               Text(
                 snap.hasError
                     ? 'No se ha podido comprobar el permiso. ¿Hay conexión a internet?'
-                    : 'Tu cuenta (${widget.user.email}) todavía no tiene permiso para el registro. '
-                        'Cuando te lo hayan dado, pulsa «Comprobar de nuevo».',
+                    : 'Esta cuenta todavía no tiene permiso para el registro.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
