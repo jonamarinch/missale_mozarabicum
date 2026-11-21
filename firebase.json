@@ -17,11 +17,20 @@
         ]
       },
       {
-        "source": "**/*.@(js|wasm|png|ttf|otf|json)",
+        "source": "**/*.@(png|ttf|otf)",
         "headers": [
           {
             "key": "Cache-Control",
             "value": "public, max-age=3600"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(js|wasm|json)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
           }
         ]
       },
