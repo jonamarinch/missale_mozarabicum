@@ -13,11 +13,22 @@ import 'package:missale_mozarabicum/providers/calendar_locale_fallback.dart';
 /// Color de los domingos que se pueden elegir (violeta del Adviento)
 const Color _violeta = Color(0xFF7B5EA7);
 
-/// En el calendario solo se pueden elegir los domingos de Adviento (decisión del usuario,
-/// 14/11/2026): el cálculo del resto de fiestas está por revisar.
+/// Color de la Navidad (dorado)
+const Color _dorado = Color(0xFFB8860B);
+
+/// En el calendario solo se pueden elegir las fiestas cargadas: los domingos de Adviento (decisión
+/// del usuario, 14/11/2026) y la Natividad, el 25 de diciembre (21/11/2026). El cálculo del resto
+/// de fiestas está por revisar.
 Map<DateTime, String> _domingosAdviento(int year) => {
-      for (final y in [year - 1, year, year + 1]) ...LiturgicalCalendar.domingosAdviento(y),
+      for (final y in [year - 1, year, year + 1]) ...{
+        ...LiturgicalCalendar.domingosAdviento(y),
+        DateTime(y, 12, 25): 'nav1',
+      },
     };
+
+/// Violeta para el Adviento; dorado para la Navidad
+Color _colorDe(DateTime d) =>
+    (_domingosAdviento(d.year)[DateTime(d.year, d.month, d.day)] ?? '').startsWith('nav') ? _dorado : _violeta;
 
 /// Primer domingo de Adviento igual o posterior a hoy
 DateTime _proximoDomingoAdviento(DateTime hoy) {
@@ -133,10 +144,20 @@ class HomeScreen extends ConsumerWidget {
                         defaultTextStyle: TextStyle(color: colores.onSurface),
                         weekendTextStyle: TextStyle(color: colores.onSurface),
                         // Domingos de Adviento: en violeta; el elegido, relleno
-                        selectedDecoration: const BoxDecoration(color: _violeta, shape: BoxShape.circle),
                         selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                       ),
                       calendarBuilders: CalendarBuilders(
+                        // El día elegido, relleno con el color de su tiempo
+                        selectedBuilder: (context, day, focusedDay) => Center(
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: _colorDe(day), shape: BoxShape.circle),
+                            child: Text('${day.day}',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                          ),
+                        ),
                         defaultBuilder: (context, day, focusedDay) {
                           if (!esDomingoAdviento(day)) return null;
                           return Center(
@@ -146,10 +167,10 @@ class HomeScreen extends ConsumerWidget {
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: _violeta, width: 2),
+                                border: Border.all(color: _colorDe(day), width: 2),
                               ),
                               child: Text('${day.day}',
-                                  style: const TextStyle(color: _violeta, fontWeight: FontWeight.w700)),
+                                  style: TextStyle(color: _colorDe(day), fontWeight: FontWeight.w700)),
                             ),
                           );
                         },
@@ -215,11 +236,11 @@ class HomeScreen extends ConsumerWidget {
   String _elegirTexto(String idioma) {
     switch (idioma) {
       case 'en':
-        return 'Choose a Sunday of Advent';
+        return 'Choose a Sunday of Advent or Christmas';
       case 'la':
-        return 'Dominicam Adventus elige';
+        return 'Dominicam Adventus vel Nativitatem elige';
       default:
-        return 'Elige un domingo de Adviento';
+        return 'Elige un domingo de Adviento o la Navidad';
     }
   }
 
