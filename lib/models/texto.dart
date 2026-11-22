@@ -1,3 +1,5 @@
+import '../config/variante.dart';
+
 // Modelo de datos para representar un texto a imprimir
 class Texto {
   final double orden;
@@ -21,6 +23,10 @@ class Texto {
   /// Líneas en blanco que hay antes del texto en el Word (español y latín)
   final int hueco;
   final int huecoLa;
+  /// Versiones de la app que no muestran este texto en la ICAE (ver config/variante.dart)
+  final List<String> ocultarEn;
+  /// Español e inglés que muestra cada versión en lugar del suyo, en la ICAE
+  final Map<String, Map<String, String>> sustituirEn;
 
   // Constructor con todos los campos requeridos para garantizar inmutabilidad.
   Texto({
@@ -39,6 +45,8 @@ class Texto {
     this.originalEn = '',
     this.hueco = 0,
     this.huecoLa = 0,
+    this.ocultarEn = const [],
+    this.sustituirEn = const {},
   });
 
   // Constructor para títulos
@@ -63,6 +71,8 @@ class Texto {
     if (edicion == 'original' && ediciones.isNotEmpty) {
       return languageCode == 'es' ? originalEs : languageCode == 'en' ? originalEn : '';
     }
+    final sustituto = sustituirEn[kVariante]?['txt_$languageCode'];
+    if (kVariante.isNotEmpty && sustituto != null) return sustituto;
     return getTextForLanguage(languageCode);
   }
 
@@ -82,7 +92,10 @@ class Texto {
   static String sinMarcas(String texto) => texto.replaceAll(RegExp(r'</?[rkbni]*>'), '');
 
   /// Indica si el texto se muestra en la edición indicada
-  bool perteneceA(String edicion) => ediciones.isEmpty || ediciones.contains(edicion);
+  bool perteneceA(String edicion) {
+    if (kVariante.isNotEmpty && edicion != 'original' && ocultarEn.contains(kVariante)) return false;
+    return ediciones.isEmpty || ediciones.contains(edicion);
+  }
 
   /// Tipo con el que se muestra en cada idioma: el latín puede no llevar ℣ y tener otro formato
   int tipoPara(String languageCode) => languageCode == 'la' ? (tipoLa ?? tipo) : tipo;
@@ -118,6 +131,8 @@ class Texto {
     'original_en': originalEn,
     'hueco': hueco,
     'hueco_la': huecoLa,
+    'ocultar_en': ocultarEn,
+    'sustituir_en': sustituirEn,
   };
 
   // Fábrica para crear un Texto a partir de un documento de Firestore
@@ -138,6 +153,11 @@ class Texto {
       originalEn: data['original_en'] ?? '',
       hueco: (data['hueco'] as num?)?.toInt() ?? 0,
       huecoLa: (data['hueco_la'] as num?)?.toInt() ?? 0,
+      ocultarEn: List<String>.from(data['ocultar_en'] ?? []),
+      sustituirEn: {
+        for (final e in ((data['sustituir_en'] as Map?) ?? {}).entries)
+          e.key as String: Map<String, String>.from(e.value as Map),
+      },
     );
   }
 }
